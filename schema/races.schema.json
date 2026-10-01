@@ -52,6 +52,12 @@
           "title": "Location",
           "type": "string"
         },
+        "country": {
+          "default": "UK",
+          "minLength": 1,
+          "title": "Country",
+          "type": "string"
+        },
         "race_date": {
           "anyOf": [
             {
@@ -64,6 +70,20 @@
           ],
           "default": null,
           "title": "Race Date"
+        },
+        "race_date_end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "last day of a multi-day race",
+          "title": "Race Date End"
         },
         "entry_type": {
           "items": {

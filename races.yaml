@@ -5,81 +5,145 @@
 #             last_verified) / expected (rough date from organisers) /
 #             estimated (based on last year's edition).
 # Only confirmed records go into the calendar feeds.
+# country defaults to UK; set it for international races.
 #
 # Field reference: README.md "Data model"; JSON Schema: schema/races.schema.json.
-#
-# The records below are the starter candidates from the project plan. None has
-# been checked against its official page yet, so every date is blank.
 
 races:
+  # --- UK marathons ---------------------------------------------------------
+
   - id: london-marathon-2027
     name: London Marathon
     distance: marathon
     location: London
+    race_date: 2027-04-24
+    race_date_end: 2027-04-25
     entry_type: [ballot, charity, gfa]
     official_url: https://www.londonmarathonevents.co.uk/london-marathon
-    status: unannounced
-    confidence: estimated
-    notes: Usually April
+    source_url: https://www.londonmarathonevents.co.uk/london-marathon
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: Runs over two days in 2027, Sat 24 and Sun 25 April
 
   - id: manchester-marathon-2027
     name: Manchester Marathon
     distance: marathon
     location: Manchester
+    race_date: 2027-04-18
     entry_type: [general]
     official_url: https://www.manchestermarathon.co.uk/
-    status: unannounced
-    confidence: estimated
-    notes: Usually April
+    source_url: https://www.manchestermarathon.co.uk/
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
 
   - id: brighton-marathon-2027
     name: Brighton Marathon
     distance: marathon
     location: Brighton
+    race_date: 2027-04-04
     entry_type: [general]
     official_url: https://www.londonmarathonevents.co.uk/brighton-marathon-weekend
-    status: unannounced
-    confidence: estimated
-    notes: Usually April
+    source_url: https://www.londonmarathonevents.co.uk/brighton-marathon-weekend
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
 
   - id: edinburgh-marathon-2027
     name: Edinburgh Marathon
     distance: marathon
     location: Edinburgh
+    race_date: 2027-05-30
     entry_type: [general]
     official_url: https://www.edinburghmarathon.com/
-    status: unannounced
-    confidence: estimated
-    notes: Usually May
+    source_url: https://www.edinburghmarathon.com/
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
 
-  - id: hackney-half-2027
-    name: Hackney Half
-    distance: half
-    location: London
-    entry_type: [general]
-    status: unannounced
-    confidence: estimated
-    notes: Usually May. Official URL still to find.
+  # --- UK half marathons ----------------------------------------------------
 
   - id: bath-half-2027
     name: Bath Half
     distance: half
     location: Bath
+    race_date: 2027-03-14
     entry_type: [general]
     official_url: https://www.londonmarathonevents.co.uk/bath-half
-    status: unannounced
-    confidence: estimated
-    notes: Usually March
+    source_url: https://www.londonmarathonevents.co.uk/bath-half
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
+
+  - id: london-landmarks-half-2027
+    name: London Landmarks Half
+    distance: half
+    location: London
+    race_date: 2027-04-04
+    entry_type: [ballot, charity]
+    official_url: https://www.llhm.co.uk/
+    source_url: https://www.llhm.co.uk/enter
+    status: ballot_closed
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: Ballot closed; charity places only
+
+  - id: kew-gardens-half-2027
+    name: Kew Gardens Half
+    distance: half
+    location: Kew, London
+    race_date: 2027-04-04
+    entry_type: [general, charity]
+    official_url: https://run-fest.com/kew-the-run/kew-gardens-half/
+    source_url: https://run-fest.com/kew-the-run/kew-gardens-half/
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: Standard entry until 31 Jan 2027, late entry until 31 Mar 2027
+
+  - id: hackney-half-2027
+    name: Hackney Half
+    distance: half
+    location: London
+    race_date: 2027-05-16
+    entry_type: [general, charity]
+    official_url: https://www.hackneymoves.com/
+    source_url: https://www.hackneymoves.com/
+    status: sold_out
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: General entries sold out; charity places only
 
   - id: great-north-run-2027
     name: Great North Run
     distance: half
     location: Newcastle to South Shields
+    race_date: 2027-09-12
     entry_type: [ballot]
+    ballot_closes: 2026-09-20T23:59
     official_url: https://www.greatrun.org/events/great-north-run
-    status: unannounced
-    confidence: estimated
-    notes: Usually September
+    source_url: https://www.greatrun.org/events/great-north-run
+    status: ballot_closed
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: September ballot drawn; a second ballot opens in January 2027
+
+  - id: cardiff-half-2027
+    name: Cardiff Half
+    distance: half
+    location: Cardiff
+    race_date: 2027-10-03
+    entry_type: [ballot, charity]
+    ballot_closes: 2026-10-18T23:59
+    ballot_results: 2026-10-22
+    price_gbp: 59
+    official_url: https://www.cardiffhalfmarathon.co.uk/
+    source_url: https://www.cardiffhalfmarathon.co.uk/ballot-open-for-2027-cardiff-half-marathon/
+    status: ballot_open
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: Free to enter the ballot; pay only if successful
 
   - id: royal-parks-half-2027
     name: Royal Parks Half
@@ -89,7 +153,7 @@ races:
     official_url: https://www.royalparkshalf.com/
     status: unannounced
     confidence: estimated
-    notes: Usually October
+    notes: Usually October. 2027 entry details not yet published
 
   - id: great-scottish-run-2027
     name: Great Scottish Run
@@ -99,24 +163,74 @@ races:
     official_url: https://www.greatrun.org/events/great-scottish-run
     status: unannounced
     confidence: estimated
-    notes: Usually October
+    notes: Usually October. 2027 date not yet published
 
-  - id: cardiff-half-2027
-    name: Cardiff Half
-    distance: half
-    location: Cardiff
+  # --- UK 10Ks --------------------------------------------------------------
+
+  - id: kew-gardens-10k-2027
+    name: Kew Gardens 10K
+    distance: 10k
+    location: Kew, London
+    race_date: 2027-04-03
     entry_type: [general]
-    official_url: https://www.cardiffhalfmarathon.co.uk/
-    status: unannounced
-    confidence: estimated
-    notes: Usually October
+    price_gbp: 42
+    official_url: https://run-fest.com/kew-the-run/kew-gardens-10k/
+    source_url: https://run-fest.com/kew-the-run/kew-gardens-10k/
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: £40 for club runners; standard entry until 31 Jan 2027
 
   - id: london-10000-2027
     name: London 10,000
     distance: 10k
     location: London
+    race_date: 2027-09-26
     entry_type: [general]
     official_url: https://www.londonmarathonevents.co.uk/london-10000
+    source_url: https://www.londonmarathonevents.co.uk/london-10000
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: Moved to September in 2027
+
+  # --- International --------------------------------------------------------
+
+  - id: paris-marathon-2027
+    name: Paris Marathon
+    distance: marathon
+    location: Paris
+    country: France
+    entry_type: [general]
+    official_url: https://www.schneiderelectricparismarathon.com/en/
     status: unannounced
     confidence: estimated
-    notes: Usually May
+    notes: Usually April. Official site blocks automated checks; confirm by hand
+
+  - id: berlin-half-2027
+    name: Berlin Half Marathon
+    distance: half
+    location: Berlin
+    country: Germany
+    race_date: 2027-04-04
+    entry_type: [ballot]
+    ballot_results: 2026-06-16
+    official_url: https://www.generali-berliner-halbmarathon.de/en/
+    source_url: https://www.generali-berliner-halbmarathon.de/en/registration/registration-information
+    status: ballot_closed
+    last_verified: 2026-10-01
+    confidence: confirmed
+    notes: 2027 lottery ran 2 April to 28 May 2026
+
+  - id: milan-marathon-2027
+    name: Milan Marathon
+    distance: marathon
+    location: Milan
+    country: Italy
+    race_date: 2027-04-04
+    entry_type: [general]
+    official_url: https://www.milanomarathon.it/en/
+    source_url: https://www.milanomarathon.it/en/marathon/
+    status: announced
+    last_verified: 2026-10-01
+    confidence: confirmed

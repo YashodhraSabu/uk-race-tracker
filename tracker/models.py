@@ -55,7 +55,9 @@ class Race(BaseModel):
     name: str = Field(min_length=1)
     distance: Distance
     location: str = Field(min_length=1)
+    country: str = Field(default="UK", min_length=1)
     race_date: date | None = None
+    race_date_end: date | None = Field(default=None, description="last day of a multi-day race")
     entry_type: list[EntryType] = Field(min_length=1)
     ballot_opens: datetime | None = None
     ballot_closes: datetime | None = None
@@ -88,6 +90,11 @@ class Race(BaseModel):
         year = int(re.match(ID_PATTERN, self.id).group(1))
         if self.race_date and self.race_date.year != year:
             raise ValueError(f"id year {year} does not match race_date {self.race_date}")
+        if self.race_date_end:
+            if not self.race_date:
+                raise ValueError("race_date_end needs a race_date")
+            if self.race_date_end <= self.race_date:
+                raise ValueError("race_date_end must be after race_date")
 
         if self.ballot_opens and self.ballot_closes and self.ballot_closes <= self.ballot_opens:
             raise ValueError("ballot_closes must be after ballot_opens")
@@ -113,6 +120,10 @@ class Race(BaseModel):
     @property
     def year(self) -> int:
         return int(self.id.rsplit("-", 1)[1])
+
+    @property
+    def is_uk(self) -> bool:
+        return self.country == "UK"
 
     @property
     def has_ballot(self) -> bool:

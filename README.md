@@ -18,7 +18,7 @@ python -m pytest                # run the tests
 
 - `races.yaml` is the data. Edit it, then run `python build.py` to check it.
 - `schema/races.schema.json` is generated from the Pydantic model in `tracker/models.py`. Run `python build.py --write-schema` after changing the model.
-- `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main`.
+- `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and once a day. In CI the site address and the "suggest a race" link come from the repo's Pages settings and name, so moving the repo needs no code changes. Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
 
 ---
 
@@ -71,6 +71,8 @@ Start with a hand-picked list of about 40 races, chosen by the club. A short, ac
 
 International majors (Berlin, Chicago, New York, Tokyo, Sydney, Boston) can be added later as their own category. Their ballots matter to UK runners too.
 
+**Added by the group (Oct 2026):** London Landmarks Half, Kew Gardens 10K, Kew Gardens Half, and three international races: Paris Marathon, Berlin Half Marathon and Milan Marathon. International races carry a `country` and can be filtered on the site.
+
 **Data model.** Each race is one record in `races.yaml`. Each year's edition is its own record, so past dates stay as history.
 
 | Field | Type | Example | Notes |
@@ -79,7 +81,9 @@ International majors (Berlin, Chicago, New York, Tokyo, Sydney, Boston) can be a
 | `name` | string | London Marathon |  |
 | `distance` | enum | marathon / half / 10k / ultra / other |  |
 | `location` | string | London | city or region |
+| `country` | string | France | defaults to `UK` |
 | `race_date` | date | 2027-04-25 | blank if unannounced |
+| `race_date_end` | date | 2027-04-26 | only for races held over several days |
 | `entry_type` | list | ballot, general, charity, gfa |  |
 | `ballot_opens` | datetime | 2026-04-27T10:00 | UK time |
 | `ballot_closes` | datetime | 2026-05-02T12:00 |  |
@@ -88,12 +92,12 @@ International majors (Berlin, Chicago, New York, Tokyo, Sydney, Boston) can be a
 | `price_gbp` | number | 79 | optional |
 | `official_url` | url |  | the page that gets monitored |
 | `source_url` | url |  | where the date was seen |
-| `status` | enum | announced / ballot open / ballot closed / sold out / done |  |
+| `status` | enum | unannounced / announced / ballot_open / ballot_closed / sold_out / done |  |
 | `last_verified` | date | 2026-10-01 | shown on the site |
 | `confidence` | enum | confirmed / expected / estimated | estimated = based on last year |
 | `notes` | text |  | short, plain |
 
-The `confidence` field matters most. Before a ballot is announced, the site can show “expected late April, based on 2026” instead of a fake exact date.
+The `confidence` field matters most. Before a ballot is announced, the site can show “expected late April, based on 2026” instead of a fake exact date. Only `confirmed` records go into the calendar feeds.
 
 ## Architecture and free stack
 
@@ -191,11 +195,11 @@ Working alone at about 6–8 hours a week, the club has a usable calendar in wee
 
 **Phase 1 — Manual MVP (weeks 1–2)**
 
-- [ ] Create the GitHub repo (public, MIT licence) with `races.yaml`, a schema and a README
+- [x] Create the GitHub repo (public, MIT licence) with `races.yaml`, a schema and a README
 - [ ] Ask the WhatsApp group which races to include; agree the first 30–40
 - [ ] Fill in each race by hand from its official page, with `source_url` and `confidence`
-- [ ] Write `build.py`: validates the YAML and generates the `.ics` feeds and a static page
-- [ ] GitHub Action: run `build.py` on every push and deploy to GitHub Pages
+- [x] Write `build.py`: validates the YAML and generates the `.ics` feeds and a static page
+- [x] GitHub Action: run `build.py` on every push and deploy to GitHub Pages
 - [ ] Share the link and subscribe instructions in the group; pin it
 
 *Done when:* 10 members have subscribed and the deadlines on the page match the official sites.
@@ -288,8 +292,8 @@ The whole project runs at £0 a month. The only optional cost is a custom domain
 
 **Open questions**
 
-- [ ] Which races go on the first list? (Ask the group.)
-- [ ] Include international majors from day one, or later?
+- [x] Which races go on the first list? (Ask the group.) First suggestions added Oct 2026.
+- [x] Include international majors from day one, or later? From day one: Paris, Berlin Half and Milan.
 - [ ] Who besides you can approve PRs?
 - [ ] Public repo (free Actions, open to contributors) or private?
 - [ ] Is a weekly WhatsApp digest wanted, and who posts it?

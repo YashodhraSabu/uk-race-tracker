@@ -92,6 +92,13 @@
 
   <h2>All races</h2>
   <div class="filters">
+    <label>Region
+      <select id="f-region">
+        <option value="">All</option>
+        <option value="uk">UK</option>
+        <option value="international">International</option>
+      </select>
+    </label>
     <label>Distance
       <select id="f-distance">
         <option value="">All</option>
@@ -127,14 +134,15 @@
       </thead>
       <tbody id="races">
         {% for r in races %}
-        <tr data-distance="{{ r.distance.value }}" data-entry="{{ r.entry_type | map(attribute='value') | join(' ') }}" data-month="{{ r.race_date.month if r.race_date else '' }}">
+        <tr data-region="{{ 'uk' if r.is_uk else 'international' }}" data-distance="{{ r.distance.value }}"data-entry="{{ r.entry_type | map(attribute='value') | join(' ') }}" data-month="{{ r.race_date.month if r.race_date else '' }}">
           <td>
             <div class="race-name">{% if r.entry_url %}<a href="{{ r.entry_url }}" rel="noopener">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %} {{ r.year }}</div>
-            <div class="meta">{{ r.location }}{% if r.notes %} · {{ r.notes }}{% endif %}</div>
+            <div class="meta">{{ r.location }}{% if not r.is_uk %}, {{ r.country }}{% endif %}{% if r.notes %} · {{ r.notes }}{% endif %}</div>
           </td>
           <td>{{ distance_label(r.distance) }}</td>
           <td>
-            {% if r.race_date %}{{ r.race_date.strftime('%d %b %Y') }}{% else %}<span class="muted">TBC</span>{% endif %}
+            {% if r.race_date_end %}{{ r.race_date.strftime('%d') }}–{{ r.race_date_end.strftime('%d %b %Y') }}
+            {% elif r.race_date %}{{ r.race_date.strftime('%d %b %Y') }}{% else %}<span class="muted">TBC</span>{% endif %}
           </td>
           <td>{% for e in r.entry_type %}{{ entry_label(e) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
           <td>
@@ -164,15 +172,17 @@
 </main>
 <script>
   (function () {
-    var ids = ["f-distance", "f-entry", "f-month"];
+    var ids = ["f-region", "f-distance", "f-entry", "f-month"];
     var rows = Array.prototype.slice.call(document.querySelectorAll("#races tr"));
     function apply() {
+      var g = document.getElementById("f-region").value;
       var d = document.getElementById("f-distance").value;
       var e = document.getElementById("f-entry").value;
       var m = document.getElementById("f-month").value;
       var shown = 0;
       rows.forEach(function (row) {
-        var ok = (!d || row.dataset.distance === d) &&
+        var ok = (!g || row.dataset.region === g) &&
+                 (!d || row.dataset.distance === d) &&
                  (!e || row.dataset.entry.split(" ").indexOf(e) !== -1) &&
                  (!m || row.dataset.month === m);
         row.hidden = !ok;

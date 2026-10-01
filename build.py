@@ -20,8 +20,9 @@ from tracker.models import RaceList
 from tracker.site import render_site
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_SITE_URL = "https://yashodhrasabu.github.io/uk-race-tracker"
-DEFAULT_SUGGEST_URL = "https://github.com/YashodhraSabu/uk-race-tracker/issues/new"
+# CI sets both from the GitHub Pages config and the repo name; these are for local builds.
+DEFAULT_SITE_URL = "http://localhost:8000"
+DEFAULT_SUGGEST_URL = "#"
 SCHEMA_PATH = ROOT / "schema" / "races.schema.json"
 
 
@@ -48,8 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data", type=Path, default=ROOT / "races.yaml")
     parser.add_argument("--out", type=Path, default=ROOT / "site")
-    parser.add_argument("--site-url", default=os.environ.get("SITE_URL", DEFAULT_SITE_URL))
-    parser.add_argument("--suggest-url", default=os.environ.get("SUGGEST_URL", DEFAULT_SUGGEST_URL))
+    parser.add_argument("--site-url", default=os.environ.get("SITE_URL") or DEFAULT_SITE_URL)
+    parser.add_argument("--suggest-url", default=os.environ.get("SUGGEST_URL") or DEFAULT_SUGGEST_URL)
     parser.add_argument("--today", type=date.fromisoformat, help="override today's date (YYYY-MM-DD)")
     parser.add_argument("--check", action="store_true", help="validate races.yaml and stop")
     parser.add_argument("--write-schema", action="store_true", help="regenerate the JSON Schema and stop")

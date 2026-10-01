@@ -32,6 +32,7 @@ class Event:
     summary: str
     day: date
     at: datetime | None = None  # UK local time; None for all-day events
+    last_day: date | None = None  # for all-day events spanning several days
 
     @property
     def all_day(self) -> bool:
@@ -44,9 +45,9 @@ def race_events(race: Race) -> list[Event]:
 
     events: list[Event] = []
 
-    def add(kind: EventKind, summary: str, day: date, at: datetime | None = None) -> None:
+    def add(kind: EventKind, summary: str, day: date, at: datetime | None = None, last_day: date | None = None) -> None:
         uid = f"{race.id}-{kind.value.replace('_', '-')}"
-        events.append(Event(uid=uid, kind=kind, race=race, summary=summary, day=day, at=at))
+        events.append(Event(uid=uid, kind=kind, race=race, summary=summary, day=day, at=at, last_day=last_day))
 
     if race.ballot_opens:
         add(EventKind.ballot_opens, f"Ballot opens: {race.name}", race.ballot_opens.date(), race.ballot_opens)
@@ -62,7 +63,7 @@ def race_events(race: Race) -> list[Event]:
             race.general_entry_opens,
         )
     if race.race_date:
-        add(EventKind.race_day, f"Race day: {race.name}", race.race_date)
+        add(EventKind.race_day, f"Race day: {race.name}", race.race_date, last_day=race.race_date_end)
     return events
 
 

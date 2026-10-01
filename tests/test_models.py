@@ -34,6 +34,8 @@ def test_confirmed_race_is_valid(confirmed_race):
             },
             "must not be after race_date",
         ),
+        ({"race_date_end": "2027-04-25"}, "race_date_end must be after race_date"),
+        ({"race_date": None, "race_date_end": "2027-04-26"}, "race_date_end needs a race_date"),
         ({"entry_type": ["general"]}, "entry_type does not include ballot"),
         ({"entry_type": ["ballot", "ballot"]}, "duplicates"),
         ({"source_url": None}, "need a source_url"),

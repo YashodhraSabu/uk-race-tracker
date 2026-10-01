@@ -50,6 +50,21 @@ def test_ballot_open_time_is_converted_from_uk_time(tmp_path, confirmed_race):
     assert opens.decoded("dtstart") == datetime(2026, 4, 27, 9, 0, tzinfo=timezone.utc)
 
 
+def test_multi_day_race_spans_all_days(tmp_path, confirmed_race):
+    out = _build(tmp_path, [{**confirmed_race, "race_date": "2027-04-24", "race_date_end": "2027-04-25"}])
+    cal = Calendar.from_ical((out / "all.ics").read_bytes())
+    race_day = next(c for c in cal.walk("VEVENT") if "race-day" in str(c["uid"]))
+    assert race_day.decoded("dtstart") == date(2027, 4, 24)
+    assert race_day.decoded("dtend") == date(2027, 4, 26)  # DTEND is exclusive
+
+
+def test_international_races_are_labelled(tmp_path, confirmed_race):
+    out = _build(tmp_path, [{**confirmed_race, "location": "Paris", "country": "France"}])
+    html = (out / "index.html").read_text(encoding="utf-8")
+    assert 'data-region="international"' in html
+    assert "Paris, France" in html
+
+
 def test_main_reports_invalid_data(tmp_path, capsys):
     data = tmp_path / "races.yaml"
     data.write_text("races:\n  - id: nope\n", encoding="utf-8")

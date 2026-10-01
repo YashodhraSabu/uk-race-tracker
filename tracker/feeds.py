@@ -61,7 +61,7 @@ def _to_ics(event: Event, generated_at: datetime) -> IcsEvent:
     ics.add("summary", event.summary)
     if event.all_day:
         ics.add("dtstart", event.day)
-        ics.add("dtend", event.day + timedelta(days=1))
+        ics.add("dtend", (event.last_day or event.day) + timedelta(days=1))
         ics.add("transp", "TRANSPARENT")
     else:
         start = to_utc(event.at)
@@ -69,8 +69,10 @@ def _to_ics(event: Event, generated_at: datetime) -> IcsEvent:
         ics.add("dtend", start + TIMED_EVENT_LENGTH)
 
     race = event.race
-    lines = [f"{race.name}, {race.location}"]
-    if race.race_date:
+    lines = [f"{race.name}, {race.location}" + ("" if race.is_uk else f", {race.country}")]
+    if race.race_date and race.race_date_end:
+        lines.append(f"Race days: {race.race_date:%a %d %b} to {race.race_date_end:%a %d %b %Y}")
+    elif race.race_date:
         lines.append(f"Race day: {race.race_date:%a %d %b %Y}")
     if race.ballot_opens and race.ballot_closes:
         lines.append(f"Ballot: {race.ballot_opens:%d %b %H:%M} to {race.ballot_closes:%d %b %H:%M} (UK time)")
