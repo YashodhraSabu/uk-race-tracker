@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UK Race & Ballot Tracker</title>
+<meta name="description" content="Major UK races with ballot and entry dates, plus calendar feeds with reminders.">
+<style>
+  :root {
+    --bg: #fbfbf9; --surface: #ffffff; --text: #1d1d1b; --muted: #5f5f5a; --line: #e3e2dc;
+    --accent: #0b6e4f; --accent-soft: #e2f1eb; --warn: #8a5a00; --warn-soft: #fbf0d9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --surface: #1d1d1b; --text: #ecebe6; --muted: #a3a29b; --line: #34332f;
+      --accent: #5ac39a; --accent-soft: #183a2e; --warn: #e6b45a; --warn-soft: #3a2e17;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.75rem; margin: 0 0 4px; }
+  h2 { font-size: 1.2rem; margin: 32px 0 12px; }
+  a { color: var(--accent); }
+  .lede, .meta, .muted { color: var(--muted); }
+  .meta { font-size: .875rem; }
+  .notice { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 14px; margin: 16px 0; font-size: .9rem; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .deadlines { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .deadlines li { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .deadlines time { font-weight: 600; min-width: 9.5em; }
+  .feeds { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .feeds h3 { margin: 0 0 2px; font-size: 1rem; }
+  .feeds p { margin: 0 0 8px; font-size: .875rem; }
+  .buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .buttons a { text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font-size: .85rem; }
+  .buttons a:hover { background: var(--accent-soft); }
+  .filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filters label { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); }
+  select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  .race-name { font-weight: 600; }
+  .tag { display: inline-block; font-size: .75rem; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .tag.unconfirmed { background: var(--warn-soft); color: var(--warn); }
+  .empty { padding: 16px; color: var(--muted); }
+  footer { margin-top: 40px; font-size: .85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>UK Race & Ballot Tracker</h1>
+  <p class="lede">Major UK races, when their ballots open and close, and calendar feeds that remind you.</p>
+  <p class="notice">Always confirm dates on the official site. Not affiliated with any race.</p>
+
+  <h2>Upcoming deadlines (next 30 days)</h2>
+  <div class="card">
+    {% if deadlines %}
+    <ul class="deadlines">
+      {% for e in deadlines %}
+      <li>
+        <time datetime="{{ (e.at or e.day).isoformat() }}">{{ e.day.strftime('%a %d %b') }}{% if e.at %} {{ e.at.strftime('%H:%M') }}{% endif %}</time>
+        <span>{{ e.summary }}{% if e.race.entry_url %} · <a href="{{ e.race.entry_url }}" rel="noopener">entry page</a>{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="margin:0">No confirmed ballot or entry dates in the next 30 days.</p>
+    {% endif %}
+  </div>
+
+  <h2>Get reminders in your calendar</h2>
+  <p class="muted">Subscribe once and new dates appear by themselves. Reminders arrive as their own events, such as “Ballot closes in 2 days”. Google Calendar can take up to a day to pick up changes.</p>
+  <div class="feeds">
+    {% for f in feeds %}
+    <div class="card">
+      <h3>{{ f.title }}</h3>
+      <p class="muted">{{ f.description }}</p>
+      <div class="buttons">
+        <a href="{{ f.google }}" rel="noopener">Google</a>
+        <a href="{{ f.webcal }}">Apple</a>
+        <a href="{{ f.outlook }}" rel="noopener">Outlook</a>
+        <a href="{{ f.filename }}">.ics</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2>All races</h2>
+  <div class="filters">
+    <label>Distance
+      <select id="f-distance">
+        <option value="">All</option>
+        <option value="marathon">Marathon</option>
+        <option value="half">Half</option>
+        <option value="10k">10K</option>
+        <option value="ultra">Ultra</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    <label>Entry type
+      <select id="f-entry">
+        <option value="">All</option>
+        <option value="ballot">Ballot</option>
+        <option value="general">General</option>
+        <option value="charity">Charity</option>
+        <option value="gfa">Good for age</option>
+      </select>
+    </label>
+    <label>Race month
+      <select id="f-month">
+        <option value="">All</option>
+        {% for m in ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+        <option value="{{ loop.index }}">{{ m }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Race</th><th>Distance</th><th>Race date</th><th>Entry</th><th>Ballot window (UK time)</th><th>Status</th><th>Last verified</th></tr>
+      </thead>
+      <tbody id="races">
+        {% for r in races %}
+        <tr data-distance="{{ r.distance.value }}" data-entry="{{ r.entry_type | map(attribute='value') | join(' ') }}" data-month="{{ r.race_date.month if r.race_date else '' }}">
+          <td>
+            <div class="race-name">{% if r.entry_url %}<a href="{{ r.entry_url }}" rel="noopener">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %} {{ r.year }}</div>
+            <div class="meta">{{ r.location }}{% if r.notes %} · {{ r.notes }}{% endif %}</div>
+          </td>
+          <td>{{ distance_label(r.distance) }}</td>
+          <td>
+            {% if r.race_date %}{{ r.race_date.strftime('%d %b %Y') }}{% else %}<span class="muted">TBC</span>{% endif %}
+          </td>
+          <td>{% for e in r.entry_type %}{{ entry_label(e) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+          <td>
+            {% if r.ballot_opens or r.ballot_closes %}
+              {{ r.ballot_opens.strftime('%d %b %H:%M') if r.ballot_opens else '?' }} – {{ r.ballot_closes.strftime('%d %b %H:%M') if r.ballot_closes else '?' }}
+            {% elif r.has_ballot %}<span class="muted">TBC</span>
+            {% else %}<span class="muted">No ballot</span>{% endif %}
+            {% if r.general_entry_opens %}<div class="meta">Entry opens {{ r.general_entry_opens.strftime('%d %b %H:%M') }}</div>{% endif %}
+          </td>
+          <td>
+            <span class="tag">{{ status_label(r.status) }}</span>
+            {% if r.confidence != confirmed %}<span class="tag unconfirmed" title="Not yet confirmed on the official site; not in the calendar feeds">{{ r.confidence.value }}</span>{% endif %}
+          </td>
+          <td>{{ r.last_verified.strftime('%d %b %Y') if r.last_verified else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="empty" id="no-match" hidden>No races match these filters.</p>
+  </div>
+
+  <footer>
+    <p><a href="{{ suggest_url }}" rel="noopener">Suggest a race or report a change</a></p>
+    <p>Only confirmed dates go into the calendar feeds. Dates marked “estimated” or “expected” are guides only.</p>
+    <p>Updated {{ generated_at.strftime('%d %b %Y %H:%M') }} UTC.</p>
+  </footer>
+</main>
+<script>
+  (function () {
+    var ids = ["f-distance", "f-entry", "f-month"];
+    var rows = Array.prototype.slice.call(document.querySelectorAll("#races tr"));
+    function apply() {
+      var d = document.getElementById("f-distance").value;
+      var e = document.getElementById("f-entry").value;
+      var m = document.getElementById("f-month").value;
+      var shown = 0;
+      rows.forEach(function (row) {
+        var ok = (!d || row.dataset.distance === d) &&
+                 (!e || row.dataset.entry.split(" ").indexOf(e) !== -1) &&
+                 (!m || row.dataset.month === m);
+        row.hidden = !ok;
+        if (ok) shown++;
+      });
+      document.getElementById("no-match").hidden = shown !== 0;
+    }
+    ids.forEach(function (id) { document.getElementById(id).addEventListener("change", apply); });
+  })();
+</script>
+</body>
+</html>

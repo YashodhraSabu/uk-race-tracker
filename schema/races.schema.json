@@ -1,0 +1,245 @@
+{
+  "$defs": {
+    "Confidence": {
+      "enum": [
+        "confirmed",
+        "expected",
+        "estimated"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "Distance": {
+      "enum": [
+        "marathon",
+        "half",
+        "10k",
+        "ultra",
+        "other"
+      ],
+      "title": "Distance",
+      "type": "string"
+    },
+    "EntryType": {
+      "enum": [
+        "ballot",
+        "general",
+        "charity",
+        "gfa"
+      ],
+      "title": "EntryType",
+      "type": "string"
+    },
+    "Race": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "slug + year, e.g. london-marathon-2027",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-(\\d{4})$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "distance": {
+          "$ref": "#/$defs/Distance"
+        },
+        "location": {
+          "minLength": 1,
+          "title": "Location",
+          "type": "string"
+        },
+        "race_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Race Date"
+        },
+        "entry_type": {
+          "items": {
+            "$ref": "#/$defs/EntryType"
+          },
+          "minItems": 1,
+          "title": "Entry Type",
+          "type": "array"
+        },
+        "ballot_opens": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ballot Opens"
+        },
+        "ballot_closes": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ballot Closes"
+        },
+        "ballot_results": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ballot Results"
+        },
+        "general_entry_opens": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "General Entry Opens"
+        },
+        "price_gbp": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Price Gbp"
+        },
+        "official_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Official Url"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "last_verified": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Verified"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "distance",
+        "location",
+        "entry_type",
+        "status",
+        "confidence"
+      ],
+      "title": "Race",
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "unannounced",
+        "announced",
+        "ballot_open",
+        "ballot_closed",
+        "sold_out",
+        "done"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The whole of races.yaml.",
+  "properties": {
+    "races": {
+      "items": {
+        "$ref": "#/$defs/Race"
+      },
+      "title": "Races",
+      "type": "array"
+    }
+  },
+  "required": [
+    "races"
+  ],
+  "title": "races.yaml",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
