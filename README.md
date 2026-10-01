@@ -1,6 +1,6 @@
 # UK Race & Ballot Tracker
 
-A free, self-updating list of major UK races that tells the run club when ballots open and close. A solo build reaches a usable version in about 2 weekends and a fully automated version in about 6 weeks of evenings. Running costs are £0.
+A free, self-updating list of major UK races that tells the run club when ballots open and close. It's built in spare time; the first version is live and full automation is planned for mid-November 2026. Running costs are £0.
 
 > Always confirm dates on the official site. Not affiliated with any race.
 
@@ -189,77 +189,60 @@ Two gotchas. Google Calendar ignores alarms in subscribed feeds, which is why th
 - The pipeline also writes `digest.txt`, a ready-to-paste weekly WhatsApp message with emoji-free plain text and links. A club admin pastes it on Mondays.
 - If the club later wants push alerts, a Telegram channel and bot are free and allowed.
 
-## Plan A: solo build
+## Delivery plan
 
-Working alone at about 6–8 hours a week, the club has a usable calendar in week 2 and full automation by week 6. Each phase ships something people can use, so the project is worth having even if it stops early.
+Engineer 1 is building the project at about 6–8 hours a week. Engineer 2 has repo access but hasn't started yet; their work is parked in the backlog below and will be planned when they join.
 
-**Phase 1 — Manual MVP (weeks 1–2)**
+### Where we are (Oct 2026)
 
-- [x] Create the GitHub repo (public, MIT licence) with `races.yaml`, a schema and a README
-- [ ] Ask the WhatsApp group which races to include; agree the first 30–40
-- [ ] Fill in each race by hand from its official page, with `source_url` and `confidence`
-- [x] Write `build.py`: validates the YAML and generates the `.ics` feeds and a static page
-- [x] GitHub Action: run `build.py` on every push and deploy to GitHub Pages
-- [ ] Share the link and subscribe instructions in the group; pin it
+Phase 1 is nearly done; the remaining steps are about the club, not code.
 
-*Done when:* 10 members have subscribed and the deadlines on the page match the official sites.
+- [x] Repo, data model and JSON Schema (`races.yaml`, `tracker/models.py`, `schema/races.schema.json`)
+- [x] `build.py`: validates the data and generates the `.ics` feeds and the static site
+- [x] Site with an "upcoming deadlines" panel, subscribe buttons, phone and removal help, and filters (region, distance, entry type, month)
+- [x] GitHub Actions: test, build and deploy to GitHub Pages on every push and daily
+- [x] Repo moved to the `ukracetracker` organisation; site at https://ukracetracker.github.io/uk-race-tracker/
+- [x] 17 races entered by hand; 14 confirmed against official pages
+- [ ] Share the link and subscribe instructions in the WhatsApp group; pin it
+- [ ] Grow the list to 30–40 races agreed with the group
+- [ ] Confirm Paris Marathon, Royal Parks Half and Great Scottish Run 2027 once published
 
-**Phase 2 — Change detection (weeks 3–4)**
+*Phase 1 done when:* 10 members have subscribed and the deadlines on the page match the official sites.
 
-- [ ] Fetch-and-clean script with robots.txt checks and polite rate limiting
-- [ ] Hash store and a daily scheduled GitHub Action
-- [ ] When a page changes, open a GitHub issue with a link and a text diff (no LLM yet)
-- [ ] Google Form + Sheet for community submissions
+### Engineer 1: data and pipeline
 
-*Done when:* a real ballot announcement is caught within 24 hours.
+| Week of | Work |
+| --- | --- |
+| 5 Oct | Finish Phase 1: share and pin the link, grow the race list |
+| 12 Oct | Fetch and clean with robots.txt checks and rate limiting |
+| 19 Oct | Hash store, daily Action, open an issue with a text diff when a page changes |
+| 26 Oct | Monitoring: alert after 7 days without a valid fetch; mark blocked sites `manual` |
+| 2 Nov | LLM extraction prompt, JSON output and validation |
+| 9 Nov | PR bot: proposed field changes with quoted evidence |
+| 16 Nov | Evaluation set of 20–30 saved pages, run in CI |
 
-**Phase 3 — LLM extraction and polish (weeks 5–6)**
+**Milestones**
 
-- [ ] Extraction prompt, JSON schema and Pydantic validation
-- [ ] Bot opens PRs with proposed field changes and quoted evidence
-- [ ] Evaluation set of 20–30 saved pages, run in CI
-- [ ] Filters, “upcoming deadlines” panel and `digest.txt` for WhatsApp
+- *Change detection (Phase 2), by end of October:* a real ballot announcement is caught within 24 hours. This matters now: ballot season runs Sep–Jan, and the Great North Run January ballot is the next big one.
+- *Automation (Phase 3), by mid-November:* most changes arrive as ready-to-merge PRs and review takes under 30 minutes a week.
+
+### Backlog: delivery and community (unassigned)
+
+These read from `races.yaml` and don't block the pipeline. They are the natural lane for Engineer 2 when they join; until then Engineer 1 picks them up only if there's spare time.
+
+- [ ] `CONTRIBUTING.md`: how to add or update a race
+- [ ] `digest.txt`: weekly ready-to-paste WhatsApp message, built by `build.py`
+- [ ] Google Form + Sheet for suggestions, and a weekly job that turns new rows into GitHub issues
+- [ ] Site polish from member feedback
 - [ ] Optional: weekly email digest
 
-*Done when:* most changes arrive as ready-to-merge PRs and review takes under 30 minutes a week.
-
-**Phase 4 — Ongoing (from week 7)**
+### Ongoing (from late November)
 
 - [ ] Review bot PRs (busiest Sep–Jan, when most ballots run)
 - [ ] Roll each race into next year's edition once results are out
-- [ ] Add a co-maintainer from the club, so the project doesn't depend on one person
+- [ ] Recruit a non-technical reviewer from the club who can approve data PRs in the GitHub web UI
 
-**Risks of going solo:** you are the only reviewer, so a busy fortnight means stale data. Mitigate by recruiting one club member as a non-technical reviewer who can approve PRs in the GitHub web UI.
-
-## Plan B: two engineers
-
-With two engineers at the same 6–8 hours a week each, v1 lands in about 4 weeks instead of 6. The bigger gain is resilience: two reviewers means data stays fresh during a busy month.
-
-Split the work along the one seam in the system, `races.yaml`. Engineer 1 owns everything that writes to it; Engineer 2 owns everything that reads from it.
-
-| Week | Engineer 1 — data and pipeline | Engineer 2 — site and delivery |
-| --- | --- | --- |
-| 1 | Schema (shared), seed data | `build.py`, calendar feeds |
-| 2 | Fetch, clean, hash, daily Action | Static site, GitHub Pages deploy |
-| 3 | LLM extraction, validation | Google Form + Sheets job, WhatsApp digest |
-| 4 | PR bot, evaluation set, monitoring | Email digest, contributor docs |
-
-Both lanes start in week 1 because the schema is agreed on day one; after that, neither engineer blocks the other.
-
-**Engineer 1 — data and pipeline (suggested: you).** Schema, seed data, fetch/clean/hash, LLM extraction, validation, the PR bot, the evaluation set and monitoring. This lane is the AI engineering showcase.
-
-**Engineer 2 — site and delivery.** `build.py`, calendar feeds, the static site, the Google Form and Sheets job, the WhatsApp digest, the email digest and docs for contributors.
-
-**Shared**
-
-- Day 1: agree the `races.yaml` schema and commit a JSON Schema file. It's the contract between the two lanes.
-- Both review the other's PRs; both approve data PRs.
-- A 20-minute check-in each week, plus a GitHub Project board (free) with columns To do / Doing / Review / Done.
-- Branch protection on `main`: one approving review required, CI must pass.
-
-**Ongoing split (after v1):** alternate weeks as the data reviewer during ballot season (Sep–Jan). Each person then spends about 15 minutes a week on reviews.
-
-**Watch out for:** schema changes made by one person without the other. Any change to the schema file needs both approvals.
+**Risk while working alone:** Engineer 1 is the only reviewer, so a busy fortnight means stale data. The daily change-detection issues make it obvious what's waiting, and Engineer 2 or a club reviewer can approve data PRs in the GitHub web UI as a backup.
 
 ## Costs, risks and open questions
 
@@ -278,7 +261,7 @@ The whole project runs at £0 a month. The only optional cost is a custom domain
 | --- | --- | --- |
 | Wrong ballot date published | Members miss a ballot | Human review on every change; quoted evidence; “last verified” shown; official link on every entry |
 | Race site redesign breaks extraction | Silent stale data | Alert when a page fails to fetch or extraction returns nothing for 7 days |
-| Maintainer burnout | Project stops | Co-maintainer; under 30 min a week target; keep scope to about 40 races |
+| Maintainer burnout | Project stops | Backup reviewer (Engineer 2 or a club member); under 30 min a week target; keep scope to about 40 races |
 | Site blocks the bot | No updates for that race | Mark as `manual`; rely on community submissions |
 | Free tier withdrawn | Pipeline step stops | Provider-agnostic code; regex fallback; GitHub alternatives (Cloudflare Pages, GitLab CI) |
 
@@ -294,7 +277,7 @@ The whole project runs at £0 a month. The only optional cost is a custom domain
 
 - [x] Which races go on the first list? (Ask the group.) First suggestions added Oct 2026.
 - [x] Include international majors from day one, or later? From day one: Paris, Berlin Half and Milan.
-- [ ] Who besides you can approve PRs?
+- [x] Who besides you can approve PRs? Engineer 2 has access as a backup; a non-technical club reviewer is still wanted.
 - [ ] Public repo (free Actions, open to contributors) or private?
 - [ ] Is a weekly WhatsApp digest wanted, and who posts it?
 - [ ] Should the project carry the club's name, or stay independent?

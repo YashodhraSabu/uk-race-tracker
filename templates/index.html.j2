@@ -36,6 +36,12 @@
   .buttons { display: flex; gap: 6px; flex-wrap: wrap; }
   .buttons a { text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font-size: .85rem; }
   .buttons a:hover { background: var(--accent-soft); }
+  .help { margin-top: 12px; display: grid; gap: 8px; }
+  .help details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; font-size: .9rem; }
+  .help summary { cursor: pointer; font-weight: 600; }
+  .help ul { padding-left: 20px; margin: 8px 0; }
+  .help li { margin-bottom: 4px; }
+  .help p { margin: 8px 0; }
   .filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
   .filters label { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); }
   select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
@@ -88,6 +94,28 @@
       </div>
     </div>
     {% endfor %}
+  </div>
+  <div class="help">
+    <details>
+      <summary>Not showing on your phone?</summary>
+      <p>Google adds new calendars on the web but often leaves them switched off on phones. Turn it on once and it stays on. It can take a few minutes to appear.</p>
+      <ul>
+        <li><strong>Android, Google Calendar app:</strong> tap ☰ → Settings → the calendar’s name under your account → turn on <em>Sync</em>. Then tick it in the ☰ menu.</li>
+        <li><strong>iPhone, Google Calendar app:</strong> tap ☰ and tick the calendar. If it isn’t listed, open Settings → your account and switch it on.</li>
+        <li><strong>iPhone, Apple Calendar with a Google account:</strong> on your phone, open <a href="https://calendar.google.com/calendar/syncselect" rel="noopener">calendar.google.com/calendar/syncselect</a>, tick the calendar and tap Save. Then tick it under Calendars in the Calendar app.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>How to remove it</summary>
+      <p>Subscribed calendars are read-only, which is how dates stay up to date, so single events can’t be deleted. Hide or remove the whole calendar instead.</p>
+      <ul>
+        <li><strong>Hide it:</strong> untick it in your calendar list. You stay subscribed.</li>
+        <li><strong>Google Calendar:</strong> on a computer, open Settings → the calendar’s name under “Settings for other calendars” → <em>Unsubscribe</em>.</li>
+        <li><strong>Apple Calendar:</strong> open Calendars, tap ⓘ next to the calendar → <em>Delete Calendar</em>.</li>
+        <li><strong>Outlook:</strong> right-click the calendar → <em>Remove</em>.</li>
+      </ul>
+      <p>Want fewer events? Subscribe to “UK race ballots” instead, which has ballot windows only.</p>
+    </details>
   </div>
 
   <h2>All races</h2>
