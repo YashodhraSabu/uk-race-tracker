@@ -19,6 +19,7 @@ python -m pytest                # run the tests
 - `races.yaml` is the data. Edit it, then run `python build.py` to check it.
 - `schema/races.schema.json` is generated from the Pydantic model in `tracker/models.py`. Run `python build.py --write-schema` after changing the model.
 - `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and once a day. In CI the site address and the "suggest a race" link come from the repo's Pages settings and name, so moving the repo needs no code changes. Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
+- Visits and subscribe-button clicks are counted with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data). It's switched on by the `GOATCOUNTER_URL` repository variable (Settings → Secrets and variables → Actions → Variables). Local and pull-request builds never count. Stats: https://ukracetracker.goatcounter.com
 
 ---
 
@@ -235,6 +236,10 @@ These read from `races.yaml` and don't block the pipeline. They are the natural 
 - [ ] Google Form + Sheet for suggestions, and a weekly job that turns new rows into GitHub issues
 - [ ] Site polish from member feedback
 - [ ] Optional: weekly email digest
+
+**Parked until there's community feedback**
+
+- Pick individual races for your calendar. Preferred approach: one feed per race named by slug without the year (e.g. `races/london-marathon.ics`, so it rolls over to next year's edition), with Google/Apple/Outlook buttons on each row, alongside the group feeds. If members want several races in one calendar, add a small free Cloudflare Worker that builds a combined feed from a list of races. Avoid one-off "add event" links: they never update when a date changes.
 
 ### Ongoing (from late November)
 

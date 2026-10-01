@@ -61,7 +61,14 @@ def subscribe_links(site_url: str) -> list[SubscribeLinks]:
     return links
 
 
-def render_site(races: list[Race], today: date, generated_at: datetime, site_url: str, suggest_url: str) -> str:
+def render_site(
+    races: list[Race],
+    today: date,
+    generated_at: datetime,
+    site_url: str,
+    suggest_url: str,
+    goatcounter_url: str | None = None,
+) -> str:
     env = Environment(
         loader=FileSystemLoader(TEMPLATES),
         autoescape=select_autoescape(["html", "j2"]),
@@ -81,5 +88,6 @@ def render_site(races: list[Race], today: date, generated_at: datetime, site_url
         today=today,
         generated_at=generated_at,
         suggest_url=suggest_url,
+        goatcounter_url=goatcounter_url,
         confirmed=Confidence.confirmed,
     )

@@ -34,12 +34,20 @@ def write_schema(path: Path = SCHEMA_PATH) -> None:
     path.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
-def build(data: Path, out: Path, site_url: str, suggest_url: str, today: date, generated_at: datetime) -> int:
+def build(
+    data: Path,
+    out: Path,
+    site_url: str,
+    suggest_url: str,
+    today: date,
+    generated_at: datetime,
+    goatcounter_url: str | None = None,
+) -> int:
     races = load_races(data).races
     out.mkdir(parents=True, exist_ok=True)
     for feed in FEEDS:
         (out / feed.filename).write_bytes(build_calendar(feed, races, generated_at))
-    html = render_site(races, today, generated_at, site_url, suggest_url)
+    html = render_site(races, today, generated_at, site_url, suggest_url, goatcounter_url)
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     return len(races)
@@ -51,6 +59,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=ROOT / "site")
     parser.add_argument("--site-url", default=os.environ.get("SITE_URL") or DEFAULT_SITE_URL)
     parser.add_argument("--suggest-url", default=os.environ.get("SUGGEST_URL") or DEFAULT_SUGGEST_URL)
+    parser.add_argument(
+        "--goatcounter-url",
+        default=os.environ.get("GOATCOUNTER_URL") or None,
+        help="GoatCounter /count endpoint; visit counting is off when unset",
+    )
     parser.add_argument("--today", type=date.fromisoformat, help="override today's date (YYYY-MM-DD)")
     parser.add_argument("--check", action="store_true", help="validate races.yaml and stop")
     parser.add_argument("--write-schema", action="store_true", help="regenerate the JSON Schema and stop")
@@ -68,7 +81,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         generated_at = datetime.now(timezone.utc).replace(microsecond=0)
         today = args.today or generated_at.date()
-        count = build(args.data, args.out, args.site_url, args.suggest_url, today, generated_at)
+        count = build(
+            args.data, args.out, args.site_url, args.suggest_url, today, generated_at, args.goatcounter_url
+        )
     except DataError as exc:
         print(exc, file=sys.stderr)
         return 1

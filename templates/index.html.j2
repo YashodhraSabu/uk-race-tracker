@@ -87,10 +87,11 @@
       <h3>{{ f.title }}</h3>
       <p class="muted">{{ f.description }}</p>
       <div class="buttons">
-        <a href="{{ f.google }}" rel="noopener">Google</a>
-        <a href="{{ f.webcal }}">Apple</a>
-        <a href="{{ f.outlook }}" rel="noopener">Outlook</a>
-        <a href="{{ f.filename }}">.ics</a>
+        {% set slug = f.filename[:-4] %}
+        <a href="{{ f.google }}" rel="noopener" data-goatcounter-click="subscribe-{{ slug }}-google" data-goatcounter-title="Subscribe: {{ f.title }} (Google)">Google</a>
+        <a href="{{ f.webcal }}" data-goatcounter-click="subscribe-{{ slug }}-apple" data-goatcounter-title="Subscribe: {{ f.title }} (Apple)">Apple</a>
+        <a href="{{ f.outlook }}" rel="noopener" data-goatcounter-click="subscribe-{{ slug }}-outlook" data-goatcounter-title="Subscribe: {{ f.title }} (Outlook)">Outlook</a>
+        <a href="{{ f.filename }}" data-goatcounter-click="subscribe-{{ slug }}-ics" data-goatcounter-title="Subscribe: {{ f.title }} (.ics)">.ics</a>
       </div>
     </div>
     {% endfor %}
@@ -195,6 +196,9 @@
   <footer>
     <p><a href="{{ suggest_url }}" rel="noopener">Suggest a race or report a change</a></p>
     <p>Only confirmed dates go into the calendar feeds. Dates marked “estimated” or “expected” are guides only.</p>
+    {% if goatcounter_url %}
+    <p>Visits are counted anonymously with <a href="https://www.goatcounter.com/" rel="noopener">GoatCounter</a>: no cookies, no personal data.</p>
+    {% endif %}
     <p>Updated {{ generated_at.strftime('%d %b %Y %H:%M') }} UTC.</p>
   </footer>
 </main>
@@ -221,5 +225,8 @@
     ids.forEach(function (id) { document.getElementById(id).addEventListener("change", apply); });
   })();
 </script>
+{% if goatcounter_url %}
+<script data-goatcounter="{{ goatcounter_url }}" async src="https://gc.zgo.at/count.js"></script>
+{% endif %}
 </body>
 </html>
