@@ -20,9 +20,8 @@ from tracker.models import RaceList
 from tracker.site import render_site
 
 ROOT = Path(__file__).resolve().parent
-# CI sets both from the GitHub Pages config and the repo name; these are for local builds.
+# CI sets this from the GitHub Pages config; the default is for local builds.
 DEFAULT_SITE_URL = "http://localhost:8000"
-DEFAULT_SUGGEST_URL = "#"
 SCHEMA_PATH = ROOT / "schema" / "races.schema.json"
 
 
@@ -38,7 +37,7 @@ def build(
     data: Path,
     out: Path,
     site_url: str,
-    suggest_url: str,
+    suggest_url: str | None,
     today: date,
     generated_at: datetime,
     goatcounter_url: str | None = None,
@@ -58,7 +57,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--data", type=Path, default=ROOT / "races.yaml")
     parser.add_argument("--out", type=Path, default=ROOT / "site")
     parser.add_argument("--site-url", default=os.environ.get("SITE_URL") or DEFAULT_SITE_URL)
-    parser.add_argument("--suggest-url", default=os.environ.get("SUGGEST_URL") or DEFAULT_SUGGEST_URL)
+    parser.add_argument(
+        "--suggest-url",
+        default=os.environ.get("SUGGEST_URL") or None,
+        help='link for "Suggest a race or report a change"; hidden when unset',
+    )
     parser.add_argument(
         "--goatcounter-url",
         default=os.environ.get("GOATCOUNTER_URL") or None,

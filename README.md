@@ -18,7 +18,7 @@ python -m pytest                # run the tests
 
 - `races.yaml` is the data. Edit it, then run `python build.py` to check it.
 - `schema/races.schema.json` is generated from the Pydantic model in `tracker/models.py`. Run `python build.py --write-schema` after changing the model.
-- `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and once a day. In CI the site address and the "suggest a race" link come from the repo's Pages settings and name, so moving the repo needs no code changes. Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
+- `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and once a day. In CI the site address comes from the repo's Pages settings, so moving the repo needs no code changes. The "Suggest a race or report a change" link is hidden until the `SUGGEST_URL` repository variable is set (planned: the Google Form). Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
 - Visits and subscribe-button clicks are counted with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data). It's switched on by the `GOATCOUNTER_URL` repository variable (Settings → Secrets and variables → Actions → Variables). Local and pull-request builds never count. Stats: https://ukracetracker.goatcounter.com
 
 ---

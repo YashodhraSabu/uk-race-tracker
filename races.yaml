@@ -22,7 +22,7 @@ races:
     official_url: https://www.londonmarathonevents.co.uk/london-marathon
     source_url: https://www.londonmarathonevents.co.uk/london-marathon
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: Runs over two days in 2027, Sat 24 and Sun 25 April
 
@@ -35,7 +35,7 @@ races:
     official_url: https://www.manchestermarathon.co.uk/
     source_url: https://www.manchestermarathon.co.uk/
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
 
   - id: brighton-marathon-2027
@@ -47,7 +47,7 @@ races:
     official_url: https://www.londonmarathonevents.co.uk/brighton-marathon-weekend
     source_url: https://www.londonmarathonevents.co.uk/brighton-marathon-weekend
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
 
   - id: edinburgh-marathon-2027
@@ -59,7 +59,7 @@ races:
     official_url: https://www.edinburghmarathon.com/
     source_url: https://www.edinburghmarathon.com/
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
 
   # --- UK half marathons ----------------------------------------------------
@@ -73,7 +73,7 @@ races:
     official_url: https://www.londonmarathonevents.co.uk/bath-half
     source_url: https://www.londonmarathonevents.co.uk/bath-half
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
 
   - id: london-landmarks-half-2027
@@ -85,7 +85,7 @@ races:
     official_url: https://www.llhm.co.uk/
     source_url: https://www.llhm.co.uk/enter
     status: ballot_closed
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: Ballot closed; charity places only
 
@@ -98,7 +98,7 @@ races:
     official_url: https://run-fest.com/kew-the-run/kew-gardens-half/
     source_url: https://run-fest.com/kew-the-run/kew-gardens-half/
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: Standard entry until 31 Jan 2027, late entry until 31 Mar 2027
 
@@ -111,7 +111,7 @@ races:
     official_url: https://www.hackneymoves.com/
     source_url: https://www.hackneymoves.com/
     status: sold_out
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: General entries sold out; charity places only
 
@@ -125,7 +125,7 @@ races:
     official_url: https://www.greatrun.org/events/great-north-run
     source_url: https://www.greatrun.org/events/great-north-run
     status: ballot_closed
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: September ballot drawn; a second ballot opens in January 2027
 
@@ -141,7 +141,7 @@ races:
     official_url: https://www.cardiffhalfmarathon.co.uk/
     source_url: https://www.cardiffhalfmarathon.co.uk/ballot-open-for-2027-cardiff-half-marathon/
     status: ballot_open
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: Free to enter the ballot; pay only if successful
 
@@ -177,7 +177,7 @@ races:
     official_url: https://run-fest.com/kew-the-run/kew-gardens-10k/
     source_url: https://run-fest.com/kew-the-run/kew-gardens-10k/
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: £40 for club runners; standard entry until 31 Jan 2027
 
@@ -190,7 +190,7 @@ races:
     official_url: https://www.londonmarathonevents.co.uk/london-10000
     source_url: https://www.londonmarathonevents.co.uk/london-10000
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: Moved to September in 2027
 
@@ -218,7 +218,7 @@ races:
     official_url: https://www.generali-berliner-halbmarathon.de/en/
     source_url: https://www.generali-berliner-halbmarathon.de/en/registration/registration-information
     status: ballot_closed
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed
     notes: 2027 lottery ran 2 April to 28 May 2026
 
@@ -232,5 +232,5 @@ races:
     official_url: https://www.milanomarathon.it/en/
     source_url: https://www.milanomarathon.it/en/marathon/
     status: announced
-    last_verified: 2026-10-01
+    last_verified: 2026-10-02
     confidence: confirmed

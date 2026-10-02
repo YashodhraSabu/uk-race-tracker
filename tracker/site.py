@@ -66,7 +66,7 @@ def render_site(
     today: date,
     generated_at: datetime,
     site_url: str,
-    suggest_url: str,
+    suggest_url: str | None,
     goatcounter_url: str | None = None,
 ) -> str:
     env = Environment(

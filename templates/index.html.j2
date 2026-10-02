@@ -194,7 +194,9 @@
   </div>
 
   <footer>
+    {% if suggest_url %}
     <p><a href="{{ suggest_url }}" rel="noopener">Suggest a race or report a change</a></p>
+    {% endif %}
     <p>Only confirmed dates go into the calendar feeds. Dates marked “estimated” or “expected” are guides only.</p>
     {% if goatcounter_url %}
     <p>Visits are counted anonymously with <a href="https://www.goatcounter.com/" rel="noopener">GoatCounter</a>: no cookies, no personal data.</p>

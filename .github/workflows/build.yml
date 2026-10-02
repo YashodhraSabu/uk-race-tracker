@@ -37,7 +37,8 @@ jobs:
         env:
           # GitHub Pages address of whichever account or org owns the repo
           SITE_URL: ${{ steps.pages.outputs.base_url }}
-          SUGGEST_URL: ${{ github.server_url }}/${{ github.repository }}/issues/new
+          # Repo variable; the "Suggest a race" link is hidden when it's unset
+          SUGGEST_URL: ${{ vars.SUGGEST_URL }}
           # Repo variable; visit counting is off when it's unset and on pull requests
           GOATCOUNTER_URL: ${{ github.event_name != 'pull_request' && vars.GOATCOUNTER_URL || '' }}
       - if: github.event_name != 'pull_request'

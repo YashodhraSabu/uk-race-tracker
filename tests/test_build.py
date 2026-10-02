@@ -65,6 +65,14 @@ def test_international_races_are_labelled(tmp_path, confirmed_race):
     assert "Paris, France" in html
 
 
+def test_suggest_link_hidden_when_unset(tmp_path, confirmed_race):
+    data = tmp_path / "races.yaml"
+    data.write_text(yaml.safe_dump({"races": [confirmed_race]}), encoding="utf-8")
+    out = tmp_path / "site"
+    build(data, out, "https://example.github.io/tracker", None, date(2026, 4, 1), GENERATED_AT)
+    assert "Suggest a race" not in (out / "index.html").read_text(encoding="utf-8")
+
+
 def test_goatcounter_is_off_by_default(tmp_path, confirmed_race):
     html = (_build(tmp_path, [confirmed_race]) / "index.html").read_text(encoding="utf-8")
     assert "gc.zgo.at" not in html
