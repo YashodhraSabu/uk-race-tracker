@@ -23,6 +23,16 @@ class EventKind(str, Enum):
 
 BALLOT_KINDS = {EventKind.ballot_opens, EventKind.ballot_closes_soon, EventKind.ballot_closes}
 
+# Wording for the website, where the date is shown alongside. Calendar
+# summaries such as "Ballot closes today" only read right on the day itself.
+SITE_LABELS = {
+    EventKind.race_day: "Race day",
+    EventKind.ballot_opens: "Ballot opens",
+    EventKind.ballot_closes_soon: "Ballot closes in 2 days",
+    EventKind.ballot_closes: "Ballot closes",
+    EventKind.general_entry_opens: "Entry opens",
+}
+
 
 @dataclass(frozen=True)
 class Event:
@@ -37,6 +47,23 @@ class Event:
     @property
     def all_day(self) -> bool:
         return self.at is None
+
+    @property
+    def site_label(self) -> str:
+        return SITE_LABELS[self.kind]
+
+    @property
+    def closing(self) -> bool:
+        return self.kind in {EventKind.ballot_closes, EventKind.ballot_closes_soon}
+
+    @property
+    def time(self) -> str | None:
+        """UK time shown next to the date on the site, if the event has one."""
+        if self.at:
+            return f"{self.at:%H:%M}"
+        if self.kind == EventKind.ballot_closes and self.race.ballot_closes:
+            return f"{self.race.ballot_closes:%H:%M}"
+        return None
 
 
 def race_events(race: Race) -> list[Event]:

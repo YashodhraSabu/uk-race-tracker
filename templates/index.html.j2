@@ -27,9 +27,13 @@
   .meta { font-size: .875rem; }
   .notice { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 14px; margin: 16px 0; font-size: .9rem; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
-  .deadlines { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-  .deadlines li { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
-  .deadlines time { font-weight: 600; min-width: 9.5em; }
+  .deadlines { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .deadlines li { display: flex; gap: 6px 14px; align-items: baseline; flex-wrap: wrap; }
+  .deadlines time { font-weight: 600; min-width: 6.5em; }
+  .deadline-race { font-weight: 600; font-size: 1.05rem; }
+  .deadline-race a { color: var(--text); }
+  .deadline-what { display: flex; gap: 8px; align-items: baseline; font-size: .875rem; }
+  .tag.closing { background: var(--warn-soft); color: var(--warn); }
   .feeds { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   .feeds h3 { margin: 0 0 2px; font-size: 1rem; }
   .feeds p { margin: 0 0 8px; font-size: .875rem; }
@@ -68,9 +72,14 @@
     {% if deadlines %}
     <ul class="deadlines">
       {% for e in deadlines %}
+      {% set days = (e.day - today).days %}
       <li>
-        <time datetime="{{ (e.at or e.day).isoformat() }}">{{ e.day.strftime('%a %d %b') }}{% if e.at %} {{ e.at.strftime('%H:%M') }}{% endif %}</time>
-        <span>{{ e.summary }}{% if e.race.entry_url %} · <a href="{{ e.race.entry_url }}" rel="noopener">entry page</a>{% endif %}</span>
+        <time datetime="{{ e.day.isoformat() }}">{{ e.day.strftime('%a %d %b') }}</time>
+        <span class="deadline-race">{% if e.race.entry_url %}<a href="{{ e.race.entry_url }}" rel="noopener">{{ e.race.name }}</a>{% else %}{{ e.race.name }}{% endif %}</span>
+        <span class="deadline-what">
+          <span class="tag{% if e.closing %} closing{% endif %}">{{ e.site_label }}{% if e.time %} · {{ e.time }}{% endif %}</span>
+          <span class="muted countdown" data-day="{{ e.day.isoformat() }}">{{ 'today' if days == 0 else 'tomorrow' if days == 1 else 'in ' ~ days ~ ' days' }}</span>
+        </span>
       </li>
       {% endfor %}
     </ul>
@@ -225,6 +234,16 @@
       document.getElementById("no-match").hidden = shown !== 0;
     }
     ids.forEach(function (id) { document.getElementById(id).addEventListener("change", apply); });
+
+    // The page is rebuilt once a day; recount from the visitor's own date.
+    var now = new Date();
+    var today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    document.querySelectorAll(".countdown").forEach(function (el) {
+      var p = el.dataset.day.split("-");
+      var days = Math.round((Date.UTC(+p[0], p[1] - 1, +p[2]) - today) / 86400000);
+      if (days < 0) { el.closest("li").hidden = true; return; }
+      el.textContent = days === 0 ? "today" : days === 1 ? "tomorrow" : "in " + days + " days";
+    });
   })();
 </script>
 {% if goatcounter_url %}
