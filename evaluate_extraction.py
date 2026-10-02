@@ -1,8 +1,8 @@
 """Score LLM extraction against the races we verified by hand.
 
 Runs extraction on the page snapshots saved by the daily page check
-(state/pages/*.txt) for every confirmed, auto-monitored race, and compares
-each field with races.yaml.
+(state/pages/*.txt) for every confirmed, auto-monitored race, giving the model
+all of a race's pages at once, and compares each field with races.yaml.
 
     python evaluate_extraction.py     # needs GEMINI_API_KEY; GEMINI_MODEL is optional
 
@@ -25,11 +25,11 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from tracker.extract import FIELDS, Extraction, extract
+from tracker.extract import FIELDS, Extraction, Pages, extract
 from tracker.llm import DEFAULT_GEMINI_MODEL, GeminiClient, JsonLLM, LLMError
 from tracker.loader import load_races
-from tracker.models import Confidence, Race
-from tracker.watch import StateStore, watched_pages
+from tracker.models import Confidence, Monitoring, Race
+from tracker.watch import Page, StateStore, race_urls
 
 ROOT = Path(__file__).resolve().parent
 OUTCOMES = ("correct", "wrong", "missed", "rejected", "extra", "agree")
@@ -72,13 +72,15 @@ def _same(expected: object, got: object, time_stated: bool) -> bool:
     return expected == got
 
 
-def cases(races: list[Race], store: StateStore) -> list[tuple[Race, str]]:
+def cases(races: list[Race], store: StateStore) -> list[tuple[Race, Pages]]:
     out = []
-    for page in watched_pages(races):
-        text = store.read_text(page)
-        if not text:
+    for race in races:
+        if race.confidence != Confidence.confirmed or race.monitoring != Monitoring.auto:
             continue
-        out.extend((race, text) for race in page.races if race.confidence == Confidence.confirmed)
+        pages = {url: store.read_text(Page(url, [race])) for url in race_urls(race)}
+        pages = {url: text for url, text in pages.items() if text}
+        if pages:
+            out.append((race, pages))
     return out
 
 
@@ -118,9 +120,9 @@ def _fmt(value: object) -> str:
 
 def run(races: list[Race], store: StateStore, llm: JsonLLM, today: date) -> tuple[list[FieldScore], list[str]]:
     scores, failures = [], []
-    for race, text in cases(races, store):
+    for race, pages in cases(races, store):
         try:
-            extraction = extract(race, text, llm, today)
+            extraction = extract(race, pages, llm, today)
         except LLMError as exc:
             failures.append(f"{race.id}: {exc}")
             continue

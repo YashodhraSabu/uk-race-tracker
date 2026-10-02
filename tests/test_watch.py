@@ -19,7 +19,8 @@ class FakeFetcher:
 
 
 def race(confirmed_race, **changes):
-    return Race.model_validate({**confirmed_race, **changes})
+    """A race whose source page is its official page, unless changed."""
+    return Race.model_validate({**confirmed_race, "source_url": confirmed_race["official_url"], **changes})
 
 
 def test_watched_pages_skips_manual_done_and_missing_urls(confirmed_race):
@@ -28,7 +29,8 @@ def test_watched_pages_skips_manual_done_and_missing_urls(confirmed_race):
         race(confirmed_race, id="other-race-2027", name="Other Race"),  # same URL: grouped
         race(confirmed_race, id="manual-race-2027", official_url="https://b.example/", monitoring="manual"),
         race(confirmed_race, id="done-race-2027", official_url="https://c.example/", status="done"),
-        race(confirmed_race, id="no-url-race-2027", official_url=None),
+        race(confirmed_race, id="no-url-race-2027", official_url=None, source_url=None, confidence="estimated",
+             last_verified=None),
     ]
     pages = watched_pages(races)
     assert [p.url for p in pages] == ["https://example.com/test-marathon"]
@@ -104,3 +106,11 @@ def test_failing_days_count_by_date_and_reset_on_recovery(tmp_path, confirmed_ra
     assert StateStore(store_dir).get(pages[0]).failing_since is None
     again = check_pages(pages, FakeFetcher({url: "<p>Race day</p>"}), StateStore(store_dir), week_later)
     assert not again[0].recovered
+
+
+def test_a_different_source_page_is_watched_too(confirmed_race):
+    from tracker.watch import race_urls
+
+    r = Race.model_validate(confirmed_race)  # fixture has a separate /ballot source page
+    assert race_urls(r) == ["https://example.com/test-marathon", "https://example.com/test-marathon/ballot"]
+    assert [p.url for p in watched_pages([r])] == race_urls(r)

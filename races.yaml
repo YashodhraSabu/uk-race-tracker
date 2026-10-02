@@ -48,8 +48,9 @@ races:
     official_url: https://www.londonmarathonevents.co.uk/brighton-marathon-weekend
     source_url: https://www.londonmarathonevents.co.uk/brighton-marathon-weekend
     status: announced
-    last_verified: 2026-10-02
+    last_verified: 2026-10-03
     confidence: confirmed
+    notes: Marathon is on Sunday 4 April; the Brighton Miles and 10K are on the Saturday
 
   - id: edinburgh-marathon-2027
     name: Edinburgh Marathon

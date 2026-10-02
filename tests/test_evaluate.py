@@ -19,7 +19,7 @@ def outcomes(scores):
 
 def test_scores_each_outcome(confirmed_race):
     race = Race.model_validate({**confirmed_race, "price_gbp": 80})
-    extraction = check(race, PAGE, raw(
+    extraction = check(race, {"https://example.com/test-marathon": PAGE}, raw(
         race_date=("2027-04-25", "Race day: Sunday 25 April 2027"),       # correct
         ballot_opens=("2026-04-27", "The ballot opens on 27 April 2026."),  # correct, date only
         price_gbp=("79", "Entry £79"),                                      # wrong
@@ -38,7 +38,7 @@ def test_scores_each_outcome(confirmed_race):
 
 def test_extra_values_are_reported_not_counted_wrong(confirmed_race):
     race = Race.model_validate(confirmed_race)
-    extraction = check(race, PAGE, raw(price_gbp=("79", "Entry £79")))
+    extraction = check(race, {"https://example.com/test-marathon": PAGE}, raw(price_gbp=("79", "Entry £79")))
     assert outcomes(score(extraction))["price_gbp"] == "extra"
 
 

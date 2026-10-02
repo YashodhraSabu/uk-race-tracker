@@ -73,14 +73,20 @@ def page_key(url: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", key.lower()).strip("-")
 
 
+def race_urls(race: Race) -> list[str]:
+    """The pages that describe a race: its official page, plus its source page if that's different."""
+    urls = [str(u) for u in (race.official_url, race.source_url) if u is not None]
+    return list(dict.fromkeys(urls))
+
+
 def watched_pages(races: list[Race]) -> list[Page]:
-    """Official pages of races that are monitored automatically and not yet done."""
+    """Pages of races that are monitored automatically and not yet done."""
     pages: dict[str, Page] = {}
     for race in races:
-        if race.official_url is None or race.monitoring != Monitoring.auto or race.status == Status.done:
+        if race.monitoring != Monitoring.auto or race.status == Status.done:
             continue
-        url = str(race.official_url)
-        pages.setdefault(url, Page(url, [])).races.append(race)
+        for url in race_urls(race):
+            pages.setdefault(url, Page(url, [])).races.append(race)
     return list(pages.values())
 
 
