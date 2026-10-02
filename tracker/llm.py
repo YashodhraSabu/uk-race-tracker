@@ -13,7 +13,8 @@ from typing import Callable, Protocol
 import httpx
 
 GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+# Free tier: 500 requests/day (Oct 2026); gemini-3.5-flash and newer Flash models allow only ~20.
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 MIN_INTERVAL = 7.0  # seconds between calls, to stay well inside free-tier per-minute limits
 MAX_RETRIES = 3
 
@@ -70,6 +71,8 @@ class GeminiClient:
                 self._sleep(10 * (attempt + 1))
                 continue
             if response.status_code == 429 or response.status_code >= 500:
+                if response.status_code == 429 and _daily_quota_used_up(response):
+                    raise LLMError(f"daily quota used up: {_error_message(response)}")
                 if attempt == MAX_RETRIES:
                     raise LLMError(f"HTTP {response.status_code} after {MAX_RETRIES} retries: {_error_message(response)}")
                 retry_after = response.headers.get("retry-after")
@@ -109,8 +112,25 @@ def _parse(data: dict) -> dict:
     return result
 
 
+def _violations(response: httpx.Response) -> list[dict]:
+    try:
+        details = response.json()["error"].get("details", [])
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return []
+    return [v for d in details if isinstance(d, dict) for v in d.get("violations", []) if isinstance(v, dict)]
+
+
+def _daily_quota_used_up(response: httpx.Response) -> bool:
+    """A per-day limit won't reset for hours, so retrying only burns more quota."""
+    return any("PerDay" in str(v.get("quotaId", "")) for v in _violations(response))
+
+
 def _error_message(response: httpx.Response) -> str:
     try:
-        return response.json()["error"]["message"][:300]
-    except (ValueError, KeyError, TypeError):
-        return response.text[:300]
+        message = " ".join(response.json()["error"]["message"].split())[:600]
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return response.text[:600]
+    for v in _violations(response):
+        if v.get("quotaId"):
+            message += f" [quota: {v['quotaId']}, limit: {v.get('quotaValue', '?')}]"
+    return message

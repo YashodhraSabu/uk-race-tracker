@@ -86,3 +86,20 @@ def test_unusable_responses_raise(response, message):
     llm, _ = make_client(lambda request: response)
     with pytest.raises(LLMError, match=message):
         llm.generate_json("s", "p", {})
+
+
+def test_daily_quota_is_not_retried_and_names_the_limit():
+    calls = []
+    body = {"error": {"message": "You exceeded your current quota.", "details": [
+        {"@type": "type.googleapis.com/google.rpc.QuotaFailure", "violations": [
+            {"quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+             "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier", "quotaValue": "20"}]}]}}
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(429, json=body)
+
+    llm, slept = make_client(handler)
+    with pytest.raises(LLMError, match=r"daily quota used up: .*PerDay.*-FreeTier, limit: 20"):
+        llm.generate_json("s", "p", {})
+    assert len(calls) == 1 and slept == []
