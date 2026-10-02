@@ -55,6 +55,7 @@ class PageState:
     last_changed: str | None = None
     last_result: str | None = None
     consecutive_failures: int = 0
+    failing_since: str | None = None  # first failure in the current run of failures
 
 
 @dataclass
@@ -63,6 +64,8 @@ class CheckResult:
     outcome: str  # "baseline", "unchanged", "changed", "failed"
     detail: str = ""
     diff: list[str] = field(default_factory=list)
+    failing_days: int = 0  # whole days since failures started (failed pages only)
+    recovered: bool = False  # page works again after failing
 
 
 def page_key(url: str) -> str:
@@ -122,13 +125,17 @@ def check_pages(pages: list[Page], fetcher: PageFetcher, store: StateStore, now:
         text = clean_html(fetched.html) if fetched.ok else ""
         if not fetched.ok or not text:
             state.consecutive_failures += 1
+            state.failing_since = state.failing_since or stamp
             state.last_result = fetched.describe() if not fetched.ok else "empty page"
-            results.append(CheckResult(page, "failed", state.last_result))
+            days = (now.date() - datetime.fromisoformat(state.failing_since).date()).days
+            results.append(CheckResult(page, "failed", state.last_result, failing_days=days))
             continue
 
+        recovered = state.failing_since is not None
         state.last_ok = stamp
         state.last_result = "ok"
         state.consecutive_failures = 0
+        state.failing_since = None
         new_hash = text_hash(text)
         previous = store.read_text(page)
 
@@ -143,7 +150,7 @@ def check_pages(pages: list[Page], fetcher: PageFetcher, store: StateStore, now:
         if outcome != "unchanged":
             store.write_text(page, text)
         state.hash = new_hash
-        results.append(CheckResult(page, outcome, diff=diff))
+        results.append(CheckResult(page, outcome, diff=diff, recovered=recovered))
 
     store.save()
     return results

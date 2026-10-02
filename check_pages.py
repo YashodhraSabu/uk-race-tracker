@@ -3,6 +3,10 @@
     python check_pages.py             # check pages, update state/, print what changed
     python check_pages.py --issues    # also open or update GitHub issues (needs GITHUB_TOKEN
                                       # and GITHUB_REPOSITORY, as set in GitHub Actions)
+
+With --issues, a changed page gets a "page-change" issue, and a page that has
+failed for --alert-after-days days gets one "page-unreachable" issue, which is
+closed automatically when the page loads again.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ from tracker.loader import DataError, load_races
 from tracker.watch import CheckResult, StateStore, check_pages, watched_pages
 
 ROOT = Path(__file__).resolve().parent
+DEFAULT_ALERT_AFTER_DAYS = 7
 
 
 def summary(results: list[CheckResult], issue_links: dict[str, str]) -> str:
@@ -35,7 +40,8 @@ def summary(results: list[CheckResult], issue_links: dict[str, str]) -> str:
     for r in results:
         detail = {"changed": "changed", "unchanged": "no change", "baseline": "first snapshot saved"}.get(r.outcome)
         if r.outcome == "failed":
-            detail = f"failed ({r.detail})"
+            days = f"{r.failing_days} day{'s' if r.failing_days != 1 else ''}"
+            detail = f"failed ({r.detail}; failing for {days})" if r.failing_days else f"failed ({r.detail})"
         link = issue_links.get(r.page.url)
         if link:
             detail += f" · [issue]({link})"
@@ -47,7 +53,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data", type=Path, default=ROOT / "races.yaml")
     parser.add_argument("--state", type=Path, default=ROOT / "state")
-    parser.add_argument("--issues", action="store_true", help="open or update GitHub issues for changed pages")
+    parser.add_argument("--issues", action="store_true", help="open or update GitHub issues")
+    parser.add_argument(
+        "--alert-after-days",
+        type=int,
+        default=int(os.environ.get("ALERT_AFTER_DAYS") or DEFAULT_ALERT_AFTER_DAYS),
+        help="open a page-unreachable issue once a page has failed for this many days (default 7)",
+    )
     args = parser.parse_args(argv)
 
     issues = None
@@ -70,13 +82,22 @@ def main(argv: list[str] | None = None) -> int:
 
     issue_links: dict[str, str] = {}
     for result in results:
-        if result.outcome != "changed":
-            continue
-        if issues:
-            issue_links[result.page.url] = issues.report_change(result, now)
-        else:
-            print(f"\n=== Changed: {result.page.label} ({result.page.url})")
-            print("\n".join(result.diff))
+        link = None
+        if result.outcome == "changed":
+            if issues:
+                link = issues.report_change(result, now)
+            else:
+                print(f"\n=== Changed: {result.page.label} ({result.page.url})")
+                print("\n".join(result.diff))
+        elif result.outcome == "failed" and result.failing_days >= args.alert_after_days:
+            if issues:
+                link = issues.report_unreachable(result)
+            else:
+                print(f"\n=== Unreachable for {result.failing_days} days: {result.page.label} ({result.detail})")
+        if result.recovered and issues:
+            link = issues.close_unreachable(result) or link
+        if link:
+            issue_links[result.page.url] = link
 
     report = summary(results, issue_links)
     print(report)

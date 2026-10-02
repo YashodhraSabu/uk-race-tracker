@@ -19,7 +19,7 @@ python -m pytest                # run the tests
 - `races.yaml` is the data. Edit it, then run `python build.py` to check it.
 - `schema/races.schema.json` is generated from the Pydantic model in `tracker/models.py`. Run `python build.py --write-schema` after changing the model.
 - `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and once a day. In CI the site address comes from the repo's Pages settings, so moving the repo needs no code changes. The "Suggest a race or report a change" link is hidden until the `SUGGEST_URL` repository variable is set (planned: the Google Form). Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
-- `python check_pages.py` checks every race's official page for changes (snapshots go in `state/`, which is not committed). The daily **Check race pages** Action runs it with `--issues`, which opens a `page-change` issue with the text diff when a page changes. Its snapshots are kept in the Actions cache, so race sites' text isn't republished in this public repo; if the cache is lost, the next run just takes fresh snapshots.
+- `python check_pages.py` checks every race's official page for changes (snapshots go in `state/`, which is not committed). The daily **Check race pages** Action runs it with `--issues`, which opens a `page-change` issue with the text diff when a page changes, and a `page-unreachable` issue when a page has failed to load for 7 days (closed automatically when it loads again). To test the alert sooner, run the workflow by hand with a lower *alert after days*. Its snapshots are kept in the Actions cache, so race sites' text isn't republished in this public repo; if the cache is lost, the next run just takes fresh snapshots.
 - Visits and subscribe-button clicks are counted with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data). It's switched on by the `GOATCOUNTER_URL` repository variable (Settings → Secrets and variables → Actions → Variables). Local and pull-request builds never count. Stats: https://ukracetracker.goatcounter.com
 
 ---
@@ -219,7 +219,7 @@ Phase 1 is nearly done; the remaining steps are about the club, not code.
 | 5 Oct | Finish Phase 1: share and pin the link, grow the race list |
 | ~~12 Oct~~ done 2 Oct | Fetch and clean with robots.txt checks and rate limiting |
 | ~~19 Oct~~ done 2 Oct | Hash store, daily Action, open an issue with a text diff when a page changes |
-| 26 Oct | Monitoring: alert after 7 days without a valid fetch (blocked sites already marked `manual`: Great North Run, Great Scottish Run, Paris) |
+| ~~26 Oct~~ done 2 Oct | Monitoring: alert after 7 days without a valid fetch (blocked sites already marked `manual`: Great North Run, Great Scottish Run, Paris) |
 | 2 Nov | LLM extraction prompt, JSON output and validation |
 | 9 Nov | PR bot: proposed field changes with quoted evidence |
 | 16 Nov | Evaluation set of 20–30 saved pages, run in CI |

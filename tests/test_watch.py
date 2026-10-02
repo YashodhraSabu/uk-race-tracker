@@ -82,3 +82,25 @@ def test_empty_page_counts_as_failure(tmp_path, confirmed_race):
     pages = watched_pages([race(confirmed_race)])
     result = check_pages(pages, FakeFetcher({pages[0].url: "<script>app()</script>"}), StateStore(tmp_path), NOW)
     assert result[0].outcome == "failed" and result[0].detail == "empty page"
+
+
+def test_failing_days_count_by_date_and_reset_on_recovery(tmp_path, confirmed_race):
+    from datetime import timedelta
+
+    pages = watched_pages([race(confirmed_race)])
+    url = pages[0].url
+    store_dir = tmp_path / "state"
+    check_pages(pages, FakeFetcher({url: "<p>Race day</p>"}), StateStore(store_dir), NOW)
+
+    first_fail = NOW.replace(hour=14)
+    result = check_pages(pages, FakeFetcher({url: 403}), StateStore(store_dir), first_fail)
+    assert result[0].failing_days == 0
+    week_later = (NOW + timedelta(days=7)).replace(hour=6)  # earlier in the day than the first failure
+    result = check_pages(pages, FakeFetcher({url: 403}), StateStore(store_dir), week_later)
+    assert result[0].failing_days == 7
+
+    back = check_pages(pages, FakeFetcher({url: "<p>Race day</p>"}), StateStore(store_dir), week_later)
+    assert back[0].recovered and back[0].outcome == "unchanged"
+    assert StateStore(store_dir).get(pages[0]).failing_since is None
+    again = check_pages(pages, FakeFetcher({url: "<p>Race day</p>"}), StateStore(store_dir), week_later)
+    assert not again[0].recovered

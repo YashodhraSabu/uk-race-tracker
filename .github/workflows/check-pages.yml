@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: "0 6 * * *" # daily, 07:00 UK summer time / 06:00 winter
   workflow_dispatch:
+    inputs:
+      alert_after_days:
+        description: "Open a 'page unreachable' issue after this many days of failures (use 0 to test)"
+        default: "7"
 
 permissions:
   contents: read
@@ -37,6 +41,7 @@ jobs:
       - run: python check_pages.py --issues
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ALERT_AFTER_DAYS: ${{ inputs.alert_after_days }} # empty on scheduled runs: default 7
 
       - name: Save page snapshots
         if: always()

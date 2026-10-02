@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from tracker.issues import LABEL, GitHubIssues, change_report, issue_title, marker
+from tracker.issues import CHANGE_LABEL, GitHubIssues, change_report, issue_title, marker
 from tracker.models import Race
 from tracker.watch import CheckResult, Page
 
@@ -44,7 +44,7 @@ def test_opens_new_issue_with_label(confirmed_race):
     assert issues.report_change(changed(confirmed_race), NOW) == "https://github.com/o/r/issues/7"
     method, path, payload = calls[-1]
     assert (method, path) == ("POST", "/repos/o/r/issues")
-    assert payload["labels"] == [LABEL]
+    assert payload["labels"] == [CHANGE_LABEL]
 
 
 def test_comments_on_existing_open_issue_for_same_page(confirmed_race):
@@ -53,3 +53,38 @@ def test_comments_on_existing_open_issue_for_same_page(confirmed_race):
     issues.report_change(changed(confirmed_race), NOW)
     assert calls[-1][:2] == ("POST", "/repos/o/r/issues/3/comments")
     assert not any(path.endswith("/labels") for _, path, _ in calls)
+
+
+def failing(confirmed_race, days=7) -> CheckResult:
+    race = Race.model_validate(confirmed_race)
+    return CheckResult(Page(str(race.official_url), [race]), "failed", "HTTP 403", failing_days=days)
+
+
+def test_opens_one_unreachable_issue_per_page(confirmed_race):
+    from tracker.issues import UNREACHABLE_LABEL, unreachable_marker
+
+    issues, calls = fake_github([])
+    assert issues.report_unreachable(failing(confirmed_race)) == "https://github.com/o/r/issues/7"
+    method, path, payload = calls[-1]
+    assert (method, path) == ("POST", "/repos/o/r/issues")
+    assert payload["title"] == "Page unreachable for 7 days: Test Marathon"
+    assert payload["labels"] == [UNREACHABLE_LABEL]
+    assert "HTTP 403" in payload["body"] and "monitoring: manual" in payload["body"]
+
+    already = [{"number": 4, "body": unreachable_marker("https://example.com/test-marathon")}]
+    issues, calls = fake_github(already)
+    assert issues.report_unreachable(failing(confirmed_race, days=8)) is None
+    assert [c[0] for c in calls] == ["GET"]  # no new issue, no daily comment
+
+
+def test_closes_unreachable_issue_when_page_recovers(confirmed_race):
+    from tracker.issues import unreachable_marker
+
+    existing = [{"number": 4, "html_url": "https://github.com/o/r/issues/4",
+                 "body": unreachable_marker("https://example.com/test-marathon")}]
+    issues, calls = fake_github(existing)
+    race = Race.model_validate(confirmed_race)
+    ok = CheckResult(Page(str(race.official_url), [race]), "unchanged", recovered=True)
+    assert issues.close_unreachable(ok) == "https://github.com/o/r/issues/4"
+    assert calls[-2][:2] == ("POST", "/repos/o/r/issues/4/comments")
+    assert calls[-1][:2] == ("PATCH", "/repos/o/r/issues/4") and calls[-1][2]["state"] == "closed"
