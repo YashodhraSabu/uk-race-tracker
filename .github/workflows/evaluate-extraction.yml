@@ -1,0 +1,40 @@
+name: Evaluate extraction
+
+# Scores LLM extraction against the races verified by hand, using the page
+# snapshots saved by the daily "Check race pages" run.
+on:
+  push:
+    branches: [main]
+    paths:
+      - tracker/extract.py
+      - tracker/llm.py
+      - evaluate_extraction.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evaluate-extraction
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore page snapshots
+        uses: actions/cache/restore@v6
+        with:
+          path: state
+          key: page-state-none # never matches exactly; the prefix below picks the newest
+          restore-keys: page-state-
+      - run: python evaluate_extraction.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }} # optional override
