@@ -1,0 +1,46 @@
+name: Check race pages
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily, 07:00 UK summer time / 06:00 winter
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write # open an issue when a page changes
+
+concurrency:
+  group: check-pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # Page snapshots live in the Actions cache, not the public repo, so we
+      # don't republish race sites' text. If the cache is ever lost, the next
+      # run just takes fresh snapshots.
+      - name: Restore page snapshots
+        uses: actions/cache/restore@v6
+        with:
+          path: state
+          key: page-state-${{ github.run_id }}
+          restore-keys: page-state-
+
+      - run: python check_pages.py --issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save page snapshots
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: state
+          key: page-state-${{ github.run_id }}

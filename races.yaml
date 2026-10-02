@@ -6,6 +6,7 @@
 #             estimated (based on last year's edition).
 # Only confirmed records go into the calendar feeds.
 # country defaults to UK; set it for international races.
+# monitoring: manual for sites that block the daily page check; check those by hand.
 #
 # Field reference: README.md "Data model"; JSON Schema: schema/races.schema.json.
 
@@ -127,7 +128,8 @@ races:
     status: ballot_closed
     last_verified: 2026-10-02
     confidence: confirmed
-    notes: September ballot drawn; a second ballot opens in January 2027
+    monitoring: manual
+    notes: September ballot drawn; a second ballot opens in January 2027. Site blocks automated checks
 
   - id: cardiff-half-2027
     name: Cardiff Half
@@ -163,7 +165,8 @@ races:
     official_url: https://www.greatrun.org/events/great-scottish-run
     status: unannounced
     confidence: estimated
-    notes: Usually October. 2027 date not yet published
+    monitoring: manual
+    notes: Usually October. 2027 date not yet published. Site blocks automated checks
 
   # --- UK 10Ks --------------------------------------------------------------
 
@@ -205,6 +208,7 @@ races:
     official_url: https://www.schneiderelectricparismarathon.com/en/
     status: unannounced
     confidence: estimated
+    monitoring: manual
     notes: Usually April. Official site blocks automated checks; confirm by hand
 
   - id: berlin-half-2027

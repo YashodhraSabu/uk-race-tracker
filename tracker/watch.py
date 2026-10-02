@@ -1,0 +1,161 @@
+"""Daily change detection for official race pages.
+
+State is kept between runs in the GitHub Actions cache rather than the
+repo, so the race sites' text isn't republished:
+
+    state/pages.json         one entry per watched URL (hash, timestamps, failures)
+    state/pages/<key>.txt    the cleaned text last seen, used to show diffs
+"""
+
+from __future__ import annotations
+
+import difflib
+import hashlib
+import json
+import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Protocol
+
+from tracker.clean import clean_html
+from tracker.fetch import FetchResult
+from tracker.models import Monitoring, Race, Status
+
+DIFF_CONTEXT = 1
+MAX_DIFF_LINES = 80
+
+
+class PageFetcher(Protocol):
+    def fetch(self, url: str) -> FetchResult: ...
+
+
+@dataclass
+class Page:
+    """A watched URL and the races that point at it."""
+
+    url: str
+    races: list[Race]
+
+    @property
+    def key(self) -> str:
+        return page_key(self.url)
+
+    @property
+    def label(self) -> str:
+        return ", ".join(race.name for race in self.races)
+
+
+@dataclass
+class PageState:
+    url: str
+    hash: str | None = None
+    last_checked: str | None = None
+    last_ok: str | None = None
+    last_changed: str | None = None
+    last_result: str | None = None
+    consecutive_failures: int = 0
+
+
+@dataclass
+class CheckResult:
+    page: Page
+    outcome: str  # "baseline", "unchanged", "changed", "failed"
+    detail: str = ""
+    diff: list[str] = field(default_factory=list)
+
+
+def page_key(url: str) -> str:
+    key = re.sub(r"^https?://(www\.)?", "", url).strip("/")
+    return re.sub(r"[^a-z0-9]+", "-", key.lower()).strip("-")
+
+
+def watched_pages(races: list[Race]) -> list[Page]:
+    """Official pages of races that are monitored automatically and not yet done."""
+    pages: dict[str, Page] = {}
+    for race in races:
+        if race.official_url is None or race.monitoring != Monitoring.auto or race.status == Status.done:
+            continue
+        url = str(race.official_url)
+        pages.setdefault(url, Page(url, [])).races.append(race)
+    return list(pages.values())
+
+
+class StateStore:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.index_path = root / "pages.json"
+        self.text_dir = root / "pages"
+        raw = json.loads(self.index_path.read_text(encoding="utf-8")) if self.index_path.exists() else {}
+        self.pages = {key: PageState(**value) for key, value in raw.items()}
+
+    def get(self, page: Page) -> PageState:
+        return self.pages.setdefault(page.key, PageState(url=page.url))
+
+    def read_text(self, page: Page) -> str | None:
+        path = self.text_dir / f"{page.key}.txt"
+        return path.read_text(encoding="utf-8") if path.exists() else None
+
+    def write_text(self, page: Page, text: str) -> None:
+        self.text_dir.mkdir(parents=True, exist_ok=True)
+        (self.text_dir / f"{page.key}.txt").write_text(text + "\n", encoding="utf-8", newline="\n")
+
+    def save(self) -> None:
+        self.root.mkdir(parents=True, exist_ok=True)
+        data = {key: vars(state) for key, state in sorted(self.pages.items())}
+        self.index_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+def text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def check_pages(pages: list[Page], fetcher: PageFetcher, store: StateStore, now: datetime) -> list[CheckResult]:
+    stamp = now.isoformat(timespec="seconds")
+    results = []
+    for page in pages:
+        state = store.get(page)
+        state.url = page.url
+        state.last_checked = stamp
+        fetched = fetcher.fetch(page.url)
+
+        text = clean_html(fetched.html) if fetched.ok else ""
+        if not fetched.ok or not text:
+            state.consecutive_failures += 1
+            state.last_result = fetched.describe() if not fetched.ok else "empty page"
+            results.append(CheckResult(page, "failed", state.last_result))
+            continue
+
+        state.last_ok = stamp
+        state.last_result = "ok"
+        state.consecutive_failures = 0
+        new_hash = text_hash(text)
+        previous = store.read_text(page)
+
+        if state.hash is None or previous is None:
+            outcome, diff = "baseline", []
+        elif new_hash == state.hash:
+            outcome, diff = "unchanged", []
+        else:
+            outcome, diff = "changed", text_diff(previous, text)
+            state.last_changed = stamp
+
+        if outcome != "unchanged":
+            store.write_text(page, text)
+        state.hash = new_hash
+        results.append(CheckResult(page, outcome, diff=diff))
+
+    store.save()
+    return results
+
+
+def text_diff(old: str, new: str) -> list[str]:
+    lines = list(
+        difflib.unified_diff(
+            old.splitlines(), new.splitlines(), fromfile="before", tofile="after", n=DIFF_CONTEXT, lineterm=""
+        )
+    )[2:]  # drop the ---/+++ header
+    if len(lines) > MAX_DIFF_LINES:
+        hidden = len(lines) - MAX_DIFF_LINES
+        lines = lines[:MAX_DIFF_LINES] + [f"... {hidden} more lines not shown"]
+    return lines

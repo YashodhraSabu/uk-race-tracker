@@ -3,3 +3,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 site/
+state/
+
+# Personal files that should never be published
+*.pdf

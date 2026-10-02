@@ -30,6 +30,14 @@
       "title": "EntryType",
       "type": "string"
     },
+    "Monitoring": {
+      "enum": [
+        "auto",
+        "manual"
+      ],
+      "title": "Monitoring",
+      "type": "string"
+    },
     "Race": {
       "additionalProperties": false,
       "properties": {
@@ -206,6 +214,10 @@
         },
         "confidence": {
           "$ref": "#/$defs/Confidence"
+        },
+        "monitoring": {
+          "$ref": "#/$defs/Monitoring",
+          "default": "auto"
         },
         "notes": {
           "anyOf": [

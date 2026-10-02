@@ -19,6 +19,7 @@ python -m pytest                # run the tests
 - `races.yaml` is the data. Edit it, then run `python build.py` to check it.
 - `schema/races.schema.json` is generated from the Pydantic model in `tracker/models.py`. Run `python build.py --write-schema` after changing the model.
 - `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and once a day. In CI the site address comes from the repo's Pages settings, so moving the repo needs no code changes. The "Suggest a race or report a change" link is hidden until the `SUGGEST_URL` repository variable is set (planned: the Google Form). Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
+- `python check_pages.py` checks every race's official page for changes (snapshots go in `state/`, which is not committed). The daily **Check race pages** Action runs it with `--issues`, which opens a `page-change` issue with the text diff when a page changes. Its snapshots are kept in the Actions cache, so race sites' text isn't republished in this public repo; if the cache is lost, the next run just takes fresh snapshots.
 - Visits and subscribe-button clicks are counted with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data). It's switched on by the `GOATCOUNTER_URL` repository variable (Settings → Secrets and variables → Actions → Variables). Local and pull-request builds never count. Stats: https://ukracetracker.goatcounter.com
 
 ---
@@ -96,6 +97,7 @@ International majors (Berlin, Chicago, New York, Tokyo, Sydney, Boston) can be a
 | `status` | enum | unannounced / announced / ballot_open / ballot_closed / sold_out / done |  |
 | `last_verified` | date | 2026-10-01 | shown on the site |
 | `confidence` | enum | confirmed / expected / estimated | estimated = based on last year |
+| `monitoring` | enum | auto / manual | defaults to `auto`; `manual` for sites that block the daily check |
 | `notes` | text |  | short, plain |
 
 The `confidence` field matters most. Before a ballot is announced, the site can show “expected late April, based on 2026” instead of a fake exact date. Only `confirmed` records go into the calendar feeds.
@@ -120,7 +122,7 @@ Both inputs, the daily page check and member suggestions, end as a pull request.
 | --- | --- | --- |
 | Data store | `races.yaml` in the GitHub repo (move to Supabase free tier only if you outgrow it) | Free |
 | Scheduler and CI | GitHub Actions (daily cron, build on merge) | Free for public repos |
-| Fetch and clean | Python, `httpx`, `trafilatura`; Playwright only for JavaScript-heavy sites | Free |
+| Fetch and clean | Python, `httpx`, `lxml`; Playwright only for JavaScript-heavy sites | Free |
 | Date extraction | Gemini API free tier, Groq free tier, or Ollama locally | Free tier |
 | Validation | Pydantic + custom rules | Free |
 | Review queue | GitHub pull requests (approve from phone or web) | Free |
@@ -135,8 +137,8 @@ Both inputs, the daily page check and member suggestions, end as a pull request.
 The pipeline checks each official race page once a day and turns any change into a pull request for a person to approve. Nothing reaches the live site without a review.
 
 1. **Fetch.** A Python script (`httpx`) downloads each `official_url`. It honours robots.txt, sends a clear user agent (e.g. `RunClubRaceBot/0.1 (+repo link)`) and waits a few seconds between requests.
-2. **Clean.** `trafilatura` pulls out the main text and drops menus, cookie banners and footers. This keeps hashes stable and LLM prompts short.
-3. **Detect change.** Hash the cleaned text and compare it with the hash stored in `state/hashes.json`. If nothing changed, stop; most days nothing will.
+2. **Clean.** Keep the page's visible text and drop scripts, styles, menus, footers and forms. This keeps hashes stable and LLM prompts short. (We tried `trafilatura` first, but it dropped dates shown in page banners, such as the Bath Half race date.)
+3. **Detect change.** Hash the cleaned text and compare it with the hash stored in `state/pages.json`. If nothing changed, stop; most days nothing will. Until the LLM step exists, a change opens a GitHub issue with the text diff.
 4. **Extract.** For changed pages only, send the text to an LLM with a fixed JSON schema (the date fields from the data model). The prompt tells it to return `null` when a date isn't stated, and to quote the sentence each date came from.
 5. **Validate.** Check the output with Pydantic. Reject impossible results: a ballot closing before it opens, a race date in the past, or a quoted sentence that doesn't appear in the page.
 6. **Propose.** Write the changes to `races.yaml` on a new branch and open a pull request. The PR shows the old value, the new value and the quoted sentence.
@@ -215,9 +217,9 @@ Phase 1 is nearly done; the remaining steps are about the club, not code.
 | Week of | Work |
 | --- | --- |
 | 5 Oct | Finish Phase 1: share and pin the link, grow the race list |
-| 12 Oct | Fetch and clean with robots.txt checks and rate limiting |
-| 19 Oct | Hash store, daily Action, open an issue with a text diff when a page changes |
-| 26 Oct | Monitoring: alert after 7 days without a valid fetch; mark blocked sites `manual` |
+| ~~12 Oct~~ done 2 Oct | Fetch and clean with robots.txt checks and rate limiting |
+| ~~19 Oct~~ done 2 Oct | Hash store, daily Action, open an issue with a text diff when a page changes |
+| 26 Oct | Monitoring: alert after 7 days without a valid fetch (blocked sites already marked `manual`: Great North Run, Great Scottish Run, Paris) |
 | 2 Nov | LLM extraction prompt, JSON output and validation |
 | 9 Nov | PR bot: proposed field changes with quoted evidence |
 | 16 Nov | Evaluation set of 20–30 saved pages, run in CI |

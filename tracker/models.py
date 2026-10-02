@@ -42,6 +42,11 @@ class Status(str, Enum):
     done = "done"
 
 
+class Monitoring(str, Enum):
+    auto = "auto"  # official_url is checked daily for changes
+    manual = "manual"  # site blocks or breaks automated checks; check by hand
+
+
 class Confidence(str, Enum):
     confirmed = "confirmed"  # read from the official page
     expected = "expected"  # organisers have given a rough date only
@@ -69,6 +74,7 @@ class Race(BaseModel):
     status: Status
     last_verified: date | None = None
     confidence: Confidence
+    monitoring: Monitoring = Monitoring.auto
     notes: str | None = None
 
     @field_validator("ballot_opens", "ballot_closes", "general_entry_opens")
