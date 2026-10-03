@@ -114,3 +114,20 @@ def test_a_different_source_page_is_watched_too(confirmed_race):
     r = Race.model_validate(confirmed_race)  # fixture has a separate /ballot source page
     assert race_urls(r) == ["https://example.com/test-marathon", "https://example.com/test-marathon/ballot"]
     assert [p.url for p in watched_pages([r])] == race_urls(r)
+
+
+def test_pages_no_longer_watched_are_forgotten_with_their_text(tmp_path, confirmed_race):
+    kept = race(confirmed_race)
+    dropped = race(confirmed_race, id="dropped-race-2027", official_url="https://other.example/",
+                   source_url="https://other.example/")
+    store_dir = tmp_path / "state"
+    both = watched_pages([kept, dropped])
+    check_pages(both, FakeFetcher({p.url: "<p>Race day</p>" for p in both}), StateStore(store_dir), NOW)
+    assert len(list((store_dir / "pages").glob("*.txt"))) == 2
+
+    manual = race(confirmed_race, id="dropped-race-2027", official_url="https://other.example/",
+                  source_url="https://other.example/", monitoring="manual")
+    pages = watched_pages([kept, manual])
+    check_pages(pages, FakeFetcher({pages[0].url: "<p>Race day</p>"}), StateStore(store_dir), NOW)
+    assert [p.stem for p in (store_dir / "pages").glob("*.txt")] == [pages[0].key]
+    assert list(StateStore(store_dir).pages) == [pages[0].key]

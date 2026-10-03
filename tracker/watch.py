@@ -109,6 +109,19 @@ class StateStore:
         self.text_dir.mkdir(parents=True, exist_ok=True)
         (self.text_dir / f"{page.key}.txt").write_text(text + "\n", encoding="utf-8", newline="\n")
 
+    def prune(self, keep: set[str]) -> list[str]:
+        """Forget pages that are no longer watched, including their saved text. Returns the removed keys."""
+        removed = sorted(key for key in self.pages if key not in keep)
+        for key in removed:
+            del self.pages[key]
+        if self.text_dir.exists():
+            for path in self.text_dir.glob("*.txt"):
+                if path.stem not in keep:
+                    path.unlink()
+                    if path.stem not in removed:
+                        removed.append(path.stem)
+        return removed
+
     def save(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         data = {key: vars(state) for key, state in sorted(self.pages.items())}
@@ -158,6 +171,8 @@ def check_pages(pages: list[Page], fetcher: PageFetcher, store: StateStore, now:
         state.hash = new_hash
         results.append(CheckResult(page, outcome, diff=diff, recovered=recovered))
 
+    # Pages we stop watching (e.g. a race switched to manual) shouldn't keep a copy of their text.
+    store.prune({page.key for page in pages})
     store.save()
     return results
 

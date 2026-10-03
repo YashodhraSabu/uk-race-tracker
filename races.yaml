@@ -6,7 +6,8 @@
 #             estimated (based on last year's edition).
 # Only confirmed records go into the calendar feeds.
 # country defaults to UK; set it for international races.
-# monitoring: manual for sites that block the daily page check; check those by hand.
+# monitoring: auto only if the site's terms of use allow automated checks AND it doesn't
+#   block the bot. Otherwise manual, and check by hand. Read the terms before adding a race.
 #
 # Field reference: README.md "Data model"; JSON Schema: schema/races.schema.json.
 
@@ -25,6 +26,8 @@ races:
     status: ballot_closed
     last_verified: 2026-10-03
     confidence: confirmed
+    # London Marathon Events' terms forbid automated checks; permission being requested (Oct 2026)
+    monitoring: manual
     notes: Runs over two days in 2027, Sat 24 and Sun 25 April
 
   - id: manchester-marathon-2027
@@ -50,6 +53,8 @@ races:
     status: announced
     last_verified: 2026-10-03
     confidence: confirmed
+    # London Marathon Events' terms forbid automated checks; permission being requested (Oct 2026)
+    monitoring: manual
     notes: Marathon is on Sunday 4 April; the Brighton Miles and 10K are on the Saturday
 
   - id: edinburgh-marathon-2027
@@ -77,6 +82,8 @@ races:
     status: announced
     last_verified: 2026-10-02
     confidence: confirmed
+    # London Marathon Events' terms forbid automated checks; permission being requested (Oct 2026)
+    monitoring: manual
 
   - id: london-landmarks-half-2027
     name: London Landmarks Half
@@ -196,6 +203,8 @@ races:
     status: announced
     last_verified: 2026-10-02
     confidence: confirmed
+    # London Marathon Events' terms forbid automated checks; permission being requested (Oct 2026)
+    monitoring: manual
     notes: Moved to September in 2027
 
   # --- International --------------------------------------------------------
