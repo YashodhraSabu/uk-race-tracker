@@ -16,11 +16,17 @@ class DataError(Exception):
 
 def load_races(path: Path) -> RaceList:
     try:
-        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise DataError(f"{path} not found") from exc
+    return parse_races(text, str(path))
+
+
+def parse_races(text: str, name: str = "races.yaml") -> RaceList:
+    try:
+        raw = yaml.safe_load(text)
     except yaml.YAMLError as exc:
-        raise DataError(f"{path} is not valid YAML: {exc}") from exc
+        raise DataError(f"{name} is not valid YAML: {exc}") from exc
 
     try:
         return RaceList.model_validate(raw)

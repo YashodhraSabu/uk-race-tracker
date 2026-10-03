@@ -30,7 +30,7 @@ def issue_title(result: CheckResult) -> str:
     return f"Page changed: {result.page.label}"
 
 
-def change_report(result: CheckResult, now: datetime) -> str:
+def change_report(result: CheckResult, now: datetime, note: str = "") -> str:
     page = result.page
     races = "\n".join(f"- {race.name} (`{race.id}`)" for race in page.races)
     diff = "\n".join(result.diff) or "(no line-level differences)"
@@ -46,7 +46,7 @@ The official page changed on {now:%a %d %b %Y}: {page.url}
 {diff}
 ```
 
-**To do**
+{note}**To do**
 - [ ] Open the page and check whether any dates, prices or entry details changed
 - [ ] If they did, update `races.yaml` (including `status`, `confidence`, `source_url` and `last_verified`)
 - [ ] Close this issue
@@ -90,9 +90,9 @@ class GitHubIssues:
         )
         self._labels_ready: set[str] = set()
 
-    def report_change(self, result: CheckResult, now: datetime) -> str:
+    def report_change(self, result: CheckResult, now: datetime, note: str = "") -> str:
         """Comment on the page's open change issue if there is one, else open a new one. Returns its URL."""
-        body = change_report(result, now)
+        body = change_report(result, now, note)
         existing = self._find_open_issue(CHANGE_LABEL, marker(result.page.url))
         if existing:
             return self._comment(existing["number"], body)

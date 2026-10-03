@@ -22,8 +22,8 @@ races:
     entry_type: [ballot, charity, gfa]
     official_url: https://www.londonmarathonevents.co.uk/london-marathon
     source_url: https://www.londonmarathonevents.co.uk/london-marathon
-    status: announced
-    last_verified: 2026-10-02
+    status: ballot_closed
+    last_verified: 2026-10-03
     confidence: confirmed
     notes: Runs over two days in 2027, Sat 24 and Sun 25 April
 

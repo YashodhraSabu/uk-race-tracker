@@ -8,10 +8,14 @@ on:
       alert_after_days:
         description: "Open a 'page unreachable' issue after this many days of failures (use 0 to test)"
         default: "7"
+      propose_for:
+        description: "Race id to run the LLM proposal for now, e.g. cardiff-half-2027 (optional)"
+        default: ""
 
 permissions:
-  contents: read
-  issues: write # open an issue when a page changes
+  contents: write # create the bot branch and commit the proposed races.yaml edit
+  pull-requests: write # open the pull request
+  issues: write # page-change and page-unreachable issues
 
 concurrency:
   group: check-pages
@@ -38,10 +42,13 @@ jobs:
           key: page-state-${{ github.run_id }}
           restore-keys: page-state-
 
-      - run: python check_pages.py --issues
+      - run: python check_pages.py --issues ${PROPOSE_FOR:+--propose-for "$PROPOSE_FOR"}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # LLM proposals; plain issues without it
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }} # optional override
           ALERT_AFTER_DAYS: ${{ inputs.alert_after_days }} # empty on scheduled runs: default 7
+          PROPOSE_FOR: ${{ inputs.propose_for }}
 
       - name: Save page snapshots
         if: always()

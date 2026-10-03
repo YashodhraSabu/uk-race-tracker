@@ -20,7 +20,8 @@ python -m pytest                # run the tests
 - `schema/races.schema.json` is generated from the Pydantic model in `tracker/models.py`. Run `python build.py --write-schema` after changing the model.
 - `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and once a day. In CI the site address comes from the repo's Pages settings, so moving the repo needs no code changes. The "Suggest a race or report a change" link is hidden until the `SUGGEST_URL` repository variable is set (planned: the Google Form). Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
 - `python check_pages.py` checks every race's official page for changes (snapshots go in `state/`, which is not committed). The daily **Check race pages** Action runs it with `--issues`, which opens a `page-change` issue with the text diff when a page changes, and a `page-unreachable` issue when a page has failed to load for 7 days (closed automatically when it loads again). To test the alert sooner, run the workflow by hand with a lower *alert after days*.
-- `python evaluate_extraction.py` (Phase 3, in progress) asks Gemini to extract each confirmed race's dates from its cached page snapshot and scores the answers against `races.yaml`. It needs `GEMINI_API_KEY`, so it normally runs as the **Evaluate extraction** Action, which reads the key from the repo secret and runs whenever the extraction code changes. `GEMINI_MODEL` (repo variable) overrides the default model. Its snapshots are kept in the Actions cache, so race sites' text isn't republished in this public repo; if the cache is lost, the next run just takes fresh snapshots.
+- `python evaluate_extraction.py` (Phase 3, in progress) asks Gemini to extract each confirmed race's dates from its cached page snapshot and scores the answers against `races.yaml`. It needs `GEMINI_API_KEY`, so it normally runs as the **Evaluate extraction** Action, which reads the key from the repo secret and runs whenever the extraction code changes. `GEMINI_MODEL` (repo variable) overrides the default model (`gemini-3.5-flash-lite`: 500 free requests a day).
+- When a watched page changes and `GEMINI_API_KEY` is set, the daily check runs extraction on all of that race's pages. If it finds new values, it opens a `data-update` **pull request** that edits only that race's lines in `races.yaml`, with each value's quote and page link, and sets `last_verified`. Otherwise it opens the usual `page-change` issue with a note. To try it without waiting for a change, run **Check race pages** by hand with a race id in *propose for*. Bot pull requests are made with the Actions token, so they don't trigger the CI build; the bot validates the edited file itself before opening one. Its snapshots are kept in the Actions cache, so race sites' text isn't republished in this public repo; if the cache is lost, the next run just takes fresh snapshots.
 - Visits and subscribe-button clicks are counted with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data). It's switched on by the `GOATCOUNTER_URL` repository variable (Settings → Secrets and variables → Actions → Variables). Local and pull-request builds never count. Stats: https://ukracetracker.goatcounter.com
 
 ---
@@ -221,9 +222,9 @@ Phase 1 is nearly done; the remaining steps are about the club, not code.
 | ~~12 Oct~~ done 2 Oct | Fetch and clean with robots.txt checks and rate limiting |
 | ~~19 Oct~~ done 2 Oct | Hash store, daily Action, open an issue with a text diff when a page changes |
 | ~~26 Oct~~ done 2 Oct | Monitoring: alert after 7 days without a valid fetch (blocked sites already marked `manual`: Great North Run, Great Scottish Run, Paris) |
-| ~~2 Nov~~ started 3 Oct | LLM extraction prompt, JSON output and validation (Gemini free tier; evaluated against the hand-verified races) |
-| 9 Nov | PR bot: proposed field changes with quoted evidence |
-| 16 Nov | Evaluation set of 20–30 saved pages, run in CI |
+| ~~2 Nov~~ done 3 Oct | LLM extraction prompt, JSON output and validation (Gemini free tier; 88% on the hand-verified races, no wrong dates) |
+| ~~9 Nov~~ done 3 Oct | PR bot: proposed field changes with quoted evidence |
+| ~~16 Nov~~ started 3 Oct | Evaluation run in CI against the hand-verified races (11 so far; grows as races are confirmed) |
 
 **Milestones**
 
