@@ -46,14 +46,14 @@ If a page fails to load for 7 days in a row (some sites block cloud servers), th
 
 ## Measuring the LLM
 
-`evaluate_extraction.py` runs extraction against every race whose details were verified by hand, and scores each field. It runs in CI whenever the prompt or model changes.
+`evaluate_extraction.py` runs extraction against every automatically checked race whose details were verified by hand, and scores each field. It runs in CI whenever the prompt or model changes.
 
-Latest run (11 races, `gemini-3.5-flash-lite`):
+Latest run (7 races, `gemini-3.5-flash-lite`):
 
-- **Race dates: 11 of 11 correct.**
-- **Known values overall: 22 of 25 (88%).** The misses were status labels (e.g. "sold out" vs "ballot closed"), which show up immediately in review next to the quoted evidence.
-- **No invented values got through.** One answer paraphrased instead of quoting and was rejected by validation, as designed.
-- It also found four real facts the hand-entered data didn't have yet.
+- **Known values: 16 of 16 correct**, including every race date and every status.
+- **No invented values got through.** Every quote is checked against the page; in earlier runs, an answer that paraphrased instead of quoting was rejected, as designed.
+- It also found four real facts the hand-entered data didn't have yet (Berlin's lottery window and Kew's entry opening dates). They came without times, so they're listed for a person instead of being added automatically.
+- Earlier, wider runs scored 84–88%: the misses were status labels (e.g. "sold out" vs "ballot closed"), which show up immediately in review next to the quoted evidence, and a prompt fix for festival weekends that turned a wrong race date into a right one.
 
 ## Design decisions and lessons
 
