@@ -57,6 +57,8 @@
   .race-name { font-weight: 600; }
   .tag { display: inline-block; font-size: .75rem; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
   .tag.unconfirmed { background: var(--warn-soft); color: var(--warn); }
+  .freshness { font-size: .8rem; }
+  .freshness.changed { color: var(--warn); font-weight: 600; }
   .empty { padding: 16px; color: var(--muted); }
   footer { margin-top: 40px; font-size: .85rem; color: var(--muted); }
 </style>
@@ -194,7 +196,11 @@
             <span class="tag">{{ status_label(r.status) }}</span>
             {% if r.confidence != confirmed %}<span class="tag unconfirmed" title="Not yet confirmed on the official site; not in the calendar feeds">{{ r.confidence.value }}</span>{% endif %}
           </td>
-          <td>{{ r.last_verified.strftime('%d %b %Y') if r.last_verified else '—' }}</td>
+          <td>
+            {{ r.last_verified.strftime('%d %b %Y') if r.last_verified else '—' }}
+            {% set f = freshness.get(r.id) %}
+            {% if f and f.text %}<div class="meta freshness {{ f.status.value }}">{{ f.text }}</div>{% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -206,6 +212,7 @@
     {% if suggest_url %}
     <p><a href="{{ suggest_url }}" rel="noopener">Suggest a race or report a change</a></p>
     {% endif %}
+    <p>“Last verified” is when a person last confirmed a race’s details against its official page. Most official pages are also checked automatically every morning; if one changes, the race is marked “being reviewed” until the details are confirmed again.</p>
     <p>Only confirmed dates go into the calendar feeds. Dates marked “estimated” or “expected” are guides only.</p>
     {% if goatcounter_url %}
     <p>Visits are counted anonymously with <a href="https://www.goatcounter.com/" rel="noopener">GoatCounter</a>: no cookies, no personal data.</p>

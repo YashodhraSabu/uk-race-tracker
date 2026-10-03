@@ -15,9 +15,11 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from tracker.feeds import FEEDS, build_calendar
+from tracker.freshness import race_freshness, states_by_url
 from tracker.loader import DataError, load_races
 from tracker.models import RaceList
 from tracker.site import render_site
+from tracker.watch import PageState, StateStore
 
 ROOT = Path(__file__).resolve().parent
 # CI sets this from the GitHub Pages config; the default is for local builds.
@@ -41,12 +43,15 @@ def build(
     today: date,
     generated_at: datetime,
     goatcounter_url: str | None = None,
+    page_states: dict[str, PageState] | None = None,
 ) -> int:
     races = load_races(data).races
+    states = states_by_url(page_states or {})
+    freshness = {race.id: race_freshness(race, states, today) for race in races}
     out.mkdir(parents=True, exist_ok=True)
     for feed in FEEDS:
         (out / feed.filename).write_bytes(build_calendar(feed, races, generated_at))
-    html = render_site(races, today, generated_at, site_url, suggest_url, goatcounter_url)
+    html = render_site(races, today, generated_at, site_url, suggest_url, goatcounter_url, freshness)
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     return len(races)
@@ -67,6 +72,12 @@ def main(argv: list[str] | None = None) -> int:
         default=os.environ.get("GOATCOUNTER_URL") or None,
         help="GoatCounter /count endpoint; visit counting is off when unset",
     )
+    parser.add_argument(
+        "--page-state",
+        type=Path,
+        default=ROOT / "state",
+        help="the daily page check's state folder; used to show when pages were last checked",
+    )
     parser.add_argument("--today", type=date.fromisoformat, help="override today's date (YYYY-MM-DD)")
     parser.add_argument("--check", action="store_true", help="validate races.yaml and stop")
     parser.add_argument("--write-schema", action="store_true", help="regenerate the JSON Schema and stop")
@@ -85,7 +96,14 @@ def main(argv: list[str] | None = None) -> int:
         generated_at = datetime.now(timezone.utc).replace(microsecond=0)
         today = args.today or generated_at.date()
         count = build(
-            args.data, args.out, args.site_url, args.suggest_url, today, generated_at, args.goatcounter_url
+            args.data,
+            args.out,
+            args.site_url,
+            args.suggest_url,
+            today,
+            generated_at,
+            args.goatcounter_url,
+            StateStore(args.page_state).pages,
         )
     except DataError as exc:
         print(exc, file=sys.stderr)

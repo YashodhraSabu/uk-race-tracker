@@ -16,6 +16,7 @@ permissions:
   contents: write # create the bot branch and commit the proposed races.yaml edit
   pull-requests: write # open the pull request
   issues: write # page-change and page-unreachable issues
+  actions: write # start the site build afterwards
 
 concurrency:
   group: check-pages
@@ -56,3 +57,9 @@ jobs:
         with:
           path: state
           key: page-state-${{ github.run_id }}
+
+      - name: Rebuild the site with today's check results
+        if: always()
+        run: gh workflow run build.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

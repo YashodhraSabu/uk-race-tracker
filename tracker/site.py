@@ -11,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from tracker.events import upcoming_deadlines
 from tracker.feeds import FEEDS
+from tracker.freshness import RaceFreshness
 from tracker.models import Confidence, Race
 
 TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
@@ -68,6 +69,7 @@ def render_site(
     site_url: str,
     suggest_url: str | None,
     goatcounter_url: str | None = None,
+    freshness: dict[str, RaceFreshness] | None = None,
 ) -> str:
     env = Environment(
         loader=FileSystemLoader(TEMPLATES),
@@ -89,5 +91,6 @@ def render_site(
         generated_at=generated_at,
         suggest_url=suggest_url,
         goatcounter_url=goatcounter_url,
+        freshness=freshness or {},
         confirmed=Confidence.confirmed,
     )

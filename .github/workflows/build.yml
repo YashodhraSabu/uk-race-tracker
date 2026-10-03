@@ -4,9 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-  schedule:
-    - cron: "15 5 * * *" # daily rebuild keeps "upcoming deadlines" current
-  workflow_dispatch:
+  workflow_dispatch: # also started by "Check race pages" after each daily check
 
 permissions:
   contents: read
@@ -30,6 +28,15 @@ jobs:
         run: |
           python build.py --write-schema
           git diff --exit-code schema/ || (echo "Run: python build.py --write-schema" && exit 1)
+      - name: Restore the daily page check's state
+        # build.py only reads state/pages.json (when each page last loaded and
+        # last changed) for the "page unchanged, checked ..." notes; no page
+        # text goes into the site. Missing is fine.
+        uses: actions/cache/restore@v6
+        with:
+          path: state
+          key: page-state-none # never matches exactly; the prefix below picks the newest
+          restore-keys: page-state-
       - id: pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v6

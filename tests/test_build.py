@@ -99,3 +99,22 @@ def test_main_reports_invalid_data(tmp_path, capsys):
     data.write_text("races:\n  - id: nope\n", encoding="utf-8")
     assert main(["--data", str(data), "--check"]) == 1
     assert "failed validation" in capsys.readouterr().err
+
+
+def test_freshness_notes_from_page_state(tmp_path, confirmed_race):
+    from tracker.watch import PageState
+
+    data = tmp_path / "races.yaml"
+    data.write_text(yaml.safe_dump({"races": [{**confirmed_race, "last_verified": "2026-04-01"}]}), encoding="utf-8")
+    states = {
+        "home": PageState(url="https://example.com/test-marathon", last_ok="2026-04-10T06:00:00+00:00"),
+        "ballot": PageState(url="https://example.com/test-marathon/ballot", last_ok="2026-04-10T06:00:00+00:00",
+                            last_changed="2026-04-09T06:00:00+00:00"),
+    }
+    out = tmp_path / "site"
+    build(data, out, "https://example.github.io/tracker", None, date(2026, 4, 10), GENERATED_AT, None, states)
+    html = (out / "index.html").read_text(encoding="utf-8")
+    assert '<div class="meta freshness changed">page changed 09 Apr: being reviewed</div>' in html
+
+    build(data, out, "https://example.github.io/tracker", None, date(2026, 4, 10), GENERATED_AT, None, {})
+    assert "freshness" not in (out / "index.html").read_text(encoding="utf-8").split("<tbody")[1]
