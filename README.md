@@ -4,6 +4,8 @@ A free, self-updating tracker of major UK running races and their ballot windows
 
 **Live site:** https://ukracetracker.github.io/uk-race-tracker/
 
+![The tracker's home page: upcoming ballot deadlines with a countdown, and calendar subscribe buttons](docs/screenshot.png)
+
 > Always confirm dates on the official site. Not affiliated with any race.
 
 ## What it does
