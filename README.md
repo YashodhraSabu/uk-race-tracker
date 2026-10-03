@@ -1,10 +1,81 @@
 # UK Race & Ballot Tracker
 
-A free, self-updating list of major UK races that tells the run club when ballots open and close. It's built in spare time; the first version is live and full automation is planned for mid-November 2026. Running costs are £0.
+A free, self-updating tracker of major UK running races and their ballot windows, with calendar feeds that remind runners before ballots open and close. Built for a running club whose race news was scattered across WhatsApp posts, so people kept missing ballots.
+
+**Live site:** https://ukracetracker.github.io/uk-race-tracker/
 
 > Always confirm dates on the official site. Not affiliated with any race.
 
-## Development
+## What it does
+
+- **One list of races**: 17 major races so far (UK marathons, halves and 10Ks, plus Paris, Berlin Half and Milan), with race dates, ballot windows, entry status and a link to each official page.
+- **Upcoming deadlines**: ballots opening or closing in the next 30 days, with a countdown.
+- **Calendar reminders**: subscribe once in Google, Apple or Outlook calendar (`all`, `marathons`, `halves` or `ballots-only`). Each ballot creates "Ballot opens", "Ballot closes in 2 days" and "Ballot closes today" events, and changed dates update in subscribers' calendars automatically.
+- **Keeps itself up to date**: every morning a bot checks each race's official pages. When one changes, an LLM reads it and opens a pull request with the proposed update and the exact sentence each value came from. A person reviews and merges it.
+- **Shows how fresh each entry is**: "verified 2 Oct · page unchanged, checked 3 Oct", or "page changed: being reviewed" until someone confirms the new details.
+- **£0 to run**: GitHub Actions, GitHub Pages and a free LLM tier. No server, no database, no accounts, no personal data.
+
+## How it works
+
+```mermaid
+flowchart LR
+    Y[(races.yaml)] --> B[build.py]
+    B --> S[Static site]
+    B --> C[.ics calendar feeds]
+    D[Daily page check<br/>GitHub Actions] -->|page changed| L[Gemini reads the page<br/>quotes every value]
+    L --> V[Validation]
+    V -->|new values| PR[Pull request<br/>with evidence]
+    V -->|nothing new| I[Issue with the diff]
+    PR -->|a person merges| Y
+```
+
+The whole system is one GitHub repo. A YAML file is the database, GitHub Actions does the work, pull requests are the review queue and GitHub Pages serves the result. Nothing reaches the live site without a person approving it.
+
+**The daily check** (`check_pages.py`):
+
+1. **Fetch** each race's official page (and its source page, if different). The bot identifies itself, honours robots.txt and waits between requests to the same site.
+2. **Clean** it down to visible text, dropping scripts, menus, footers and forms, so the text only changes when the content does.
+3. **Compare** it with yesterday's snapshot. Most days nothing changes and the run stops there.
+4. **Extract**: for a changed page, Gemini gets all of that race's pages and returns the race date, ballot dates, results date, entry date, price and status as JSON, quoting the sentence each value came from.
+5. **Validate**: every quote must actually appear on the page, race dates must belong to the right year, and the updated record must pass the same checks as hand-entered data (a ballot can't close before it opens, and so on). Anything that fails is dropped and listed for a person.
+6. **Propose**: a pull request edits only that race's lines in `races.yaml` and shows the old value, new value and evidence for each field. Merging it rebuilds the site and calendar feeds.
+
+If a page fails to load for 7 days in a row (some sites block cloud servers), the bot opens an issue suggesting the race be checked by hand, and closes it if the page comes back.
+
+## Measuring the LLM
+
+`evaluate_extraction.py` runs extraction against every race whose details were verified by hand, and scores each field. It runs in CI whenever the prompt or model changes.
+
+Latest run (11 races, `gemini-3.5-flash-lite`):
+
+- **Race dates: 11 of 11 correct.**
+- **Known values overall: 22 of 25 (88%).** The misses were status labels (e.g. "sold out" vs "ballot closed"), which show up immediately in review next to the quoted evidence.
+- **No invented values got through.** One answer paraphrased instead of quoting and was rejected by validation, as designed.
+- It also found four real facts the hand-entered data didn't have yet.
+
+## Design decisions and lessons
+
+- **Evidence or nothing.** The LLM must quote the page for every value, and code checks the quote exists. That turns "trust the model" into "check one sentence", which takes seconds.
+- **Keep all visible text, not "main content".** `trafilatura` was the first choice for cleaning pages, but it threw away banner text, which is exactly where some races put their date (Bath Half). Keeping all visible text minus scripts, menus and footers was more reliable.
+- **Don't republish other sites' content.** Page snapshots are needed to show diffs, but they live in the GitHub Actions cache rather than this public repo. Only facts (dates, prices) and links are stored.
+- **Reminders are events, not alarms.** Google Calendar ignores alarms in subscribed feeds, so "closes in 2 days" is its own event. Stable event IDs mean a corrected date moves the existing event instead of duplicating it.
+- **Choose the free model by its quota.** The newest Gemini Flash models allowed about 20 free requests a day and were often overloaded. Flash-Lite allows 500, scored well on the evaluation, and is the default. The provider sits behind one small client, so it can be swapped.
+- **Small edits, not re-dumped YAML.** The bot changes only the affected lines of `races.yaml`, keeping comments and making review diffs tiny.
+- **Two kinds of "fresh".** `last_verified` only changes when a person confirms details. The site adds what the daily check knows, so stale data never looks fresh and fresh data doesn't look stale.
+
+## Tech stack
+
+| Area | Tools |
+| --- | --- |
+| Data and validation | YAML, Pydantic, generated JSON Schema |
+| Fetching and cleaning | `httpx`, `lxml`, `urllib.robotparser` |
+| LLM extraction | Google Gemini API (`generateContent` with a response schema), free tier |
+| Site and feeds | Jinja2, vanilla JS, `icalendar` |
+| Automation | GitHub Actions (daily check, build, evaluation), GitHub Pages |
+| Analytics | GoatCounter (no cookies, no personal data) |
+| Tests | pytest, with the network and LLM faked; no test touches a real site or API |
+
+## Running it locally
 
 Requires Python 3.11+.
 
@@ -12,281 +83,64 @@ Requires Python 3.11+.
 py -m venv .venv
 .venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-python build.py                 # validate races.yaml, write site/ and the .ics feeds
 python -m pytest                # run the tests
+python build.py                 # validate races.yaml and build site/ and the .ics feeds
+python -m http.server 8000 --directory site    # preview at http://localhost:8000
+python check_pages.py           # check the race pages and print what changed
 ```
 
-- `races.yaml` is the data. Edit it, then run `python build.py` to check it.
-- `schema/races.schema.json` is generated from the Pydantic model in `tracker/models.py`. Run `python build.py --write-schema` after changing the model.
-- `site/` is build output and is not committed. GitHub Actions builds and deploys it to GitHub Pages on every push to `main` and after each daily page check. The race table's *Last verified* date is when a person last confirmed the details; underneath, the daily check adds "page unchanged, checked …", "page changed …: being reviewed" or "checked by hand" (read from the check's `state/pages.json` in the Actions cache). In CI the site address comes from the repo's Pages settings, so moving the repo needs no code changes. The "Suggest a race or report a change" link is hidden until the `SUGGEST_URL` repository variable is set (planned: the Google Form). Local builds use `http://localhost:8000`; preview with `python -m http.server 8000 --directory site`.
-- `python check_pages.py` checks every race's official page for changes (snapshots go in `state/`, which is not committed). The daily **Check race pages** Action runs it with `--issues`, which opens a `page-change` issue with the text diff when a page changes, and a `page-unreachable` issue when a page has failed to load for 7 days (closed automatically when it loads again). To test the alert sooner, run the workflow by hand with a lower *alert after days*.
-- `python evaluate_extraction.py` (Phase 3, in progress) asks Gemini to extract each confirmed race's dates from its cached page snapshot and scores the answers against `races.yaml`. It needs `GEMINI_API_KEY`, so it normally runs as the **Evaluate extraction** Action, which reads the key from the repo secret and runs whenever the extraction code changes. `GEMINI_MODEL` (repo variable) overrides the default model (`gemini-3.5-flash-lite`: 500 free requests a day).
-- When a watched page changes and `GEMINI_API_KEY` is set, the daily check runs extraction on all of that race's pages. If it finds new values, it opens a `data-update` **pull request** that edits only that race's lines in `races.yaml`, with each value's quote and page link, and sets `last_verified`. Otherwise it opens the usual `page-change` issue with a note. To try it without waiting for a change, run **Check race pages** by hand with a race id in *propose for*. Bot pull requests are made with the Actions token, so they don't trigger the CI build; the bot validates the edited file itself before opening one. Its snapshots are kept in the Actions cache, so race sites' text isn't republished in this public repo; if the cache is lost, the next run just takes fresh snapshots.
-- Visits and subscribe-button clicks are counted with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data). It's switched on by the `GOATCOUNTER_URL` repository variable (Settings → Secrets and variables → Actions → Variables). Local and pull-request builds never count. Stats: https://ukracetracker.goatcounter.com
-
----
-
-## Overview
-
-**Problem.** Race and ballot news reaches the WhatsApp group as scattered posts. People miss ballot windows because nobody tracks them in one place.
-
-**Goals**
-
-- One list of 30–60 major UK races with race dates and entry windows
-- Reminders before each ballot opens and closes, with no manual effort from members
-- Data that updates itself, with a person approving changes
-- £0 running costs, using free tiers only
-
-**Non-goals (for now)**
-
-- Every small local race in the UK
-- A bot posting inside the WhatsApp group
-- User accounts, logins or a mobile app
-- Handling race entries or payments
-
-**Success criteria**
-
-- At least 20 club members subscribed to the calendar within a month of launch
-- No missed ballot for a listed race in the first season (Sep–Jan)
-- Every entry verified against its official page in the last 14 days
-- Under 30 minutes a week of maintenance
-
-## Scope and data model
-
-Start with a hand-picked list of about 40 races, chosen by the club. A short, accurate list beats a long one with wrong dates.
-
-**Inclusion rule:** a race joins the list if it is a 10K or longer, in the UK, and either uses a ballot or sells out within weeks. Members can propose others (see Community input).
-
-**Starter candidates** (race months and entry types are approximate; confirm each on its official site in Phase 1):
-
-| Race | Distance | Usual month | Entry type |
-| --- | --- | --- | --- |
-| London Marathon | Marathon | April | Ballot + charity + good-for-age |
-| Manchester Marathon | Marathon | April | General entry |
-| Brighton Marathon | Marathon | April | General entry |
-| Edinburgh Marathon | Marathon | May | General entry |
-| Hackney Half | Half | May | General entry |
-| Bath Half | Half | March | General entry |
-| Great North Run | Half | September | Ballot |
-| Royal Parks Half | Half | October | Ballot + charity |
-| Great Scottish Run | Half | October | General entry |
-| Cardiff Half | Half | October | General entry |
-| London 10,000 | 10K | May | General entry |
-
-International majors (Berlin, Chicago, New York, Tokyo, Sydney, Boston) can be added later as their own category. Their ballots matter to UK runners too.
-
-**Added by the group (Oct 2026):** London Landmarks Half, Kew Gardens 10K, Kew Gardens Half, and three international races: Paris Marathon, Berlin Half Marathon and Milan Marathon. International races carry a `country` and can be filtered on the site.
-
-**Data model.** Each race is one record in `races.yaml`. Each year's edition is its own record, so past dates stay as history.
-
-| Field | Type | Example | Notes |
-| --- | --- | --- | --- |
-| `id` | string | `london-marathon-2027` | slug + year, unique |
-| `name` | string | London Marathon |  |
-| `distance` | enum | marathon / half / 10k / ultra / other |  |
-| `location` | string | London | city or region |
-| `country` | string | France | defaults to `UK` |
-| `race_date` | date | 2027-04-25 | blank if unannounced |
-| `race_date_end` | date | 2027-04-26 | only for races held over several days |
-| `entry_type` | list | ballot, general, charity, gfa |  |
-| `ballot_opens` | datetime | 2026-04-27T10:00 | UK time |
-| `ballot_closes` | datetime | 2026-05-02T12:00 |  |
-| `ballot_results` | date | 2026-07-01 |  |
-| `general_entry_opens` | datetime |  | for first-come races |
-| `price_gbp` | number | 79 | optional |
-| `official_url` | url |  | the page that gets monitored |
-| `source_url` | url |  | where the date was seen |
-| `status` | enum | unannounced / announced / ballot_open / ballot_closed / sold_out / done |  |
-| `last_verified` | date | 2026-10-01 | shown on the site |
-| `confidence` | enum | confirmed / expected / estimated | estimated = based on last year |
-| `monitoring` | enum | auto / manual | defaults to `auto`; `manual` for sites that block the daily check |
-| `notes` | text |  | short, plain |
-
-The `confidence` field matters most. Before a ballot is announced, the site can show “expected late April, based on 2026” instead of a fake exact date. Only `confirmed` records go into the calendar feeds.
-
-## Architecture and free stack
-
-The whole system is a GitHub repo. A YAML file holds the data, GitHub Actions does the work, pull requests are the review queue and GitHub Pages serves the results. There's no server or database to run.
-
-```mermaid
-flowchart LR
-    A[Daily page check<br/>GitHub Actions cron] --> PR[Pull request<br/>human review]
-    B[Member suggestions<br/>Google Form + Sheet] --> PR
-    PR -->|merge| Y[(races.yaml)]
-    Y --> S[Static site]
-    Y --> C[Calendar feeds .ics]
-    Y --> D[WhatsApp digest.txt]
-```
-
-Both inputs, the daily page check and member suggestions, end as a pull request. Only a merged PR changes `races.yaml`, and each merge rebuilds the site, the calendar feeds and the WhatsApp digest.
-
-| Layer | Tool | Cost |
-| --- | --- | --- |
-| Data store | `races.yaml` in the GitHub repo (move to Supabase free tier only if you outgrow it) | Free |
-| Scheduler and CI | GitHub Actions (daily cron, build on merge) | Free for public repos |
-| Fetch and clean | Python, `httpx`, `lxml`; Playwright only for JavaScript-heavy sites | Free |
-| Date extraction | Gemini API free tier (chosen; `generateContent` with a response schema), Groq free tier as backup | Free tier |
-| Validation | Pydantic + custom rules | Free |
-| Review queue | GitHub pull requests (approve from phone or web) | Free |
-| Website | Astro or Eleventy on GitHub Pages (or Cloudflare Pages) | Free |
-| Calendar feeds | Python `icalendar` | Free |
-| Submissions | Google Forms + Sheets API | Free |
-| Email digest (optional) | Buttondown or Resend free tier | Free tier |
-| Monitoring | GitHub Actions failure emails; an issue opened when a page goes 7 days without a valid fetch | Free |
-
-## Data pipeline
-
-The pipeline checks each official race page once a day and turns any change into a pull request for a person to approve. Nothing reaches the live site without a review.
-
-1. **Fetch.** A Python script (`httpx`) downloads each `official_url`. It honours robots.txt, sends a clear user agent (e.g. `RunClubRaceBot/0.1 (+repo link)`) and waits a few seconds between requests.
-2. **Clean.** Keep the page's visible text and drop scripts, styles, menus, footers and forms. This keeps hashes stable and LLM prompts short. (We tried `trafilatura` first, but it dropped dates shown in page banners, such as the Bath Half race date.)
-3. **Detect change.** Hash the cleaned text and compare it with the hash stored in `state/pages.json`. If nothing changed, stop; most days nothing will. Until the LLM step exists, a change opens a GitHub issue with the text diff.
-4. **Extract.** For changed pages only, send the text to an LLM with a fixed JSON schema (the date fields from the data model). The prompt tells it to return `null` when a date isn't stated, and to quote the sentence each date came from.
-5. **Validate.** Check the output with Pydantic. Reject impossible results: a ballot closing before it opens, a race date in the past, or a quoted sentence that doesn't appear in the page.
-6. **Propose.** Write the changes to `races.yaml` on a new branch and open a pull request. The PR shows the old value, the new value and the quoted sentence.
-7. **Review.** A maintainer checks the PR against the source link and merges it. Merging triggers the site and calendar rebuild.
-
-**Free LLM options** (free-tier limits change often; check before building):
-
-- Google Gemini API free tier (Flash models): enough for a few dozen calls a day
-- Groq free tier (open-weight models such as Llama)
-- Local model through Ollama on your laptop, if you'd rather run extraction by hand
-- Fallback with no LLM: regex for common date formats, with every hit flagged for review
-
-At about 40 races, roughly 2–5 pages change on a typical day, so a free tier is plenty.
-
-**Pages that are hard to read**
-
-- *JavaScript-only sites:* use Playwright in GitHub Actions (free, but slower), and only for the races that need it.
-- *Dates only on social media or in emails:* don't scrape these. Mark the race `manual` and rely on community submissions.
-- *PDF entry packs:* extract the text with `pypdf`, then use the same LLM step.
-
-**Evaluation.** Keep a test set of 20–30 saved pages with known correct dates. Run extraction against it in CI whenever the prompt or model changes, and track accuracy per field. This is also the strongest portfolio piece in the project.
-
-**Community input.** A Google Form (name of race, link, what changed) feeds a Google Sheet. A weekly job reads the sheet with the Sheets API and opens a PR for each new row, through the same validation and review.
-
-## Website, calendar and reminders
-
-Members get reminders by subscribing to a calendar feed once. There are no accounts and no stored personal data.
-
-**Website (static).** Built from `races.yaml` on every merge. Astro or Eleventy both work; a single page with a little vanilla JS is also enough.
-
-- “Upcoming deadlines” at the top: ballots opening or closing in the next 30 days
-- Full race table with filters for distance, month and entry type
-- Each race shows its status, a “last verified” date and a link to the official page
-- A “Suggest a race / report a change” link to the Google Form
-- Calendar subscribe buttons (Google, Apple, Outlook) with one-line instructions
-
-**Calendar feeds (.ics).** Generated with the Python `ics` or `icalendar` library and published alongside the site.
-
-- `all.ics`, plus `marathons.ics`, `halves.ics` and `ballots-only.ics`
-- Every entry window creates events for “Ballot opens”, “Ballot closes in 2 days” and “Ballot closes today”. Each event links to the entry page.
-- Race days are all-day events.
-- Stable event UIDs (e.g. `london-marathon-2027-ballot-opens`), so an updated date moves the existing event instead of duplicating it.
-
-Two gotchas. Google Calendar ignores alarms in subscribed feeds, which is why the reminder is its own event (“closes in 2 days”) instead of an alert. Google also refreshes subscribed feeds slowly, sometimes taking a day, so announce last-minute changes in the group too.
-
-**Email digest (optional, Phase 3).** A weekly “this week in ballots” email, built from the same data. Free options: Buttondown or Resend free tiers (check current limits). Use double opt-in and include an unsubscribe link.
-
-**WhatsApp distribution.** Don't put a bot in the group. Unofficial libraries (whatsapp-web.js, Baileys) break WhatsApp's terms and can get the number banned. The official Business API needs a business number and charges per message.
-
-- Pin the site and calendar link in the group description
-- The pipeline also writes `digest.txt`, a ready-to-paste weekly WhatsApp message with emoji-free plain text and links. A club admin pastes it on Mondays.
-- If the club later wants push alerts, a Telegram channel and bot are free and allowed.
-
-## Delivery plan
-
-Engineer 1 is building the project at about 6–8 hours a week. Engineer 2 has repo access but hasn't started yet; their work is parked in the backlog below and will be planned when they join.
-
-### Where we are (Oct 2026)
-
-Phase 1 is nearly done; the remaining steps are about the club, not code.
-
-- [x] Repo, data model and JSON Schema (`races.yaml`, `tracker/models.py`, `schema/races.schema.json`)
-- [x] `build.py`: validates the data and generates the `.ics` feeds and the static site
-- [x] Site with an "upcoming deadlines" panel, subscribe buttons, phone and removal help, and filters (region, distance, entry type, month)
-- [x] GitHub Actions: test, build and deploy to GitHub Pages on every push and daily
-- [x] Repo moved to the `ukracetracker` organisation; site at https://ukracetracker.github.io/uk-race-tracker/
-- [x] 17 races entered by hand; 14 confirmed against official pages
-- [ ] Share the link and subscribe instructions in the WhatsApp group; pin it
-- [ ] Grow the list to 30–40 races agreed with the group
-- [ ] Confirm Paris Marathon, Royal Parks Half and Great Scottish Run 2027 once published
-
-*Phase 1 done when:* 10 members have subscribed and the deadlines on the page match the official sites.
-
-### Engineer 1: data and pipeline
-
-| Week of | Work |
+| Path | What it is |
 | --- | --- |
-| 5 Oct | Finish Phase 1: share and pin the link, grow the race list |
-| ~~12 Oct~~ done 2 Oct | Fetch and clean with robots.txt checks and rate limiting |
-| ~~19 Oct~~ done 2 Oct | Hash store, daily Action, open an issue with a text diff when a page changes |
-| ~~26 Oct~~ done 2 Oct | Monitoring: alert after 7 days without a valid fetch (blocked sites already marked `manual`: Great North Run, Great Scottish Run, Paris) |
-| ~~2 Nov~~ done 3 Oct | LLM extraction prompt, JSON output and validation (Gemini free tier; 88% on the hand-verified races, no wrong dates) |
-| ~~9 Nov~~ done 3 Oct | PR bot: proposed field changes with quoted evidence |
-| ~~16 Nov~~ started 3 Oct | Evaluation run in CI against the hand-verified races (11 so far; grows as races are confirmed) |
+| `races.yaml` | The data: one record per race edition |
+| `build.py` | Validates the data and builds the site and calendar feeds |
+| `check_pages.py` | The daily page check, LLM proposals and alerts |
+| `evaluate_extraction.py` | Scores LLM extraction against hand-verified races |
+| `tracker/` | Models, fetching, cleaning, extraction, GitHub integration |
+| `templates/` | The site template |
+| `schema/races.schema.json` | JSON Schema generated from the model (`python build.py --write-schema`) |
 
-**Milestones**
+**Configuration** (repo secrets and variables, all optional):
 
-- *Change detection (Phase 2), by end of October:* a real ballot announcement is caught within 24 hours. This matters now: ballot season runs Sep–Jan, and the Great North Run January ballot is the next big one.
-- *Automation (Phase 3), by mid-November:* most changes arrive as ready-to-merge PRs and review takes under 30 minutes a week.
+| Name | Purpose |
+| --- | --- |
+| `GEMINI_API_KEY` (secret) | Turns on LLM extraction and pull requests; without it, changes are reported as issues |
+| `GEMINI_MODEL` | Overrides the default model (`gemini-3.5-flash-lite`) |
+| `GOATCOUNTER_URL` | Turns on visit counting |
 
-### Backlog: delivery and community (unassigned)
+To try the pull-request flow without waiting for a real change, run the **Check race pages** workflow by hand with a race id in *propose for*.
 
-These read from `races.yaml` and don't block the pipeline. They are the natural lane for Engineer 2 when they join; until then Engineer 1 picks them up only if there's spare time.
+## Data model
 
-- [ ] `CONTRIBUTING.md`: how to add or update a race
-- [ ] `digest.txt`: weekly ready-to-paste WhatsApp message, built by `build.py`
-- [ ] Google Form + Sheet for suggestions, and a weekly job that turns new rows into GitHub issues
-- [ ] Site polish from member feedback
-- [ ] Optional: weekly email digest
+Each race edition is one record in `races.yaml` (`london-marathon-2027`), so past years stay as history.
 
-**Parked until there's community feedback**
-
-- Pick individual races for your calendar. Preferred approach: one feed per race named by slug without the year (e.g. `races/london-marathon.ics`, so it rolls over to next year's edition), with Google/Apple/Outlook buttons on each row, alongside the group feeds. If members want several races in one calendar, add a small free Cloudflare Worker that builds a combined feed from a list of races. Avoid one-off "add event" links: they never update when a date changes.
-
-### Ongoing (from late November)
-
-- [ ] Review bot PRs (busiest Sep–Jan, when most ballots run)
-- [ ] Roll each race into next year's edition once results are out
-- [ ] Recruit a non-technical reviewer from the club who can approve data PRs in the GitHub web UI
-
-**Risk while working alone:** Engineer 1 is the only reviewer, so a busy fortnight means stale data. The daily change-detection issues make it obvious what's waiting, and Engineer 2 or a club reviewer can approve data PRs in the GitHub web UI as a backup.
-
-## Costs, risks and open questions
-
-The whole project runs at £0 a month. The only optional cost is a custom domain at about £10 a year; the free `username.github.io` address works fine.
-
-**Free-tier limits to watch** (check current terms before building):
-
-- *GitHub Actions:* free for public repos on standard runners. A private repo gets a monthly minute allowance, which a daily job uses only a small part of.
-- *GitHub Pages:* 1 GB site size and a soft limit of 100 GB bandwidth a month, far more than a club needs.
-- *LLM free tiers:* rate limits and models change. Keep the extraction step behind one small function so you can swap providers.
-- *Email tiers:* subscriber or daily-send caps. Calendar feeds have no such limit, which is one more reason to make them the main channel.
-
-**Risks**
-
-| Risk | Impact | Mitigation |
+| Field | Example | Notes |
 | --- | --- | --- |
-| Wrong ballot date published | Members miss a ballot | Human review on every change; quoted evidence; “last verified” shown; official link on every entry |
-| Race site redesign breaks extraction | Silent stale data | Alert when a page fails to fetch or extraction returns nothing for 7 days |
-| Maintainer burnout | Project stops | Backup reviewer (Engineer 2 or a club member); under 30 min a week target; keep scope to about 40 races |
-| Site blocks the bot | No updates for that race | Mark as `manual`; rely on community submissions |
-| Free tier withdrawn | Pipeline step stops | Provider-agnostic code; regex fallback; GitHub alternatives (Cloudflare Pages, GitLab CI) |
+| `id` | `london-marathon-2027` | slug + year |
+| `name`, `distance`, `location`, `country` | London Marathon, marathon, London, UK | `distance`: marathon / half / 10k / ultra / other |
+| `race_date`, `race_date_end` | 2027-04-24, 2027-04-25 | end date only for multi-day races |
+| `entry_type` | [ballot, charity, gfa] | ballot / general / charity / gfa |
+| `ballot_opens`, `ballot_closes` | 2026-04-27T10:00 | UK local time |
+| `ballot_results`, `general_entry_opens`, `price_gbp` | 2026-07-01 | optional |
+| `official_url`, `source_url` | | pages that are checked daily |
+| `status` | ballot_open | unannounced / announced / ballot_open / ballot_closed / sold_out / done |
+| `confidence` | confirmed | confirmed / expected / estimated; only confirmed dates go into calendars |
+| `last_verified` | 2026-10-02 | when a person last confirmed the details |
+| `monitoring` | auto | `manual` for sites that block automated checks |
+| `notes` | | short and plain |
 
-**Legal and privacy**
+## Being a polite scraper
 
-- Monitor official race pages only. Aggregators such as Let's Do This and Finishers usually forbid scraping in their terms.
-- Respect robots.txt, keep to one request per page a day and identify the bot.
-- Store facts (dates, prices) and link to the source. Don't copy race descriptions, logos or photos.
-- Calendar feeds collect no personal data. If you add email, GDPR applies: get explicit consent, use double opt-in, provide an unsubscribe link and a short privacy note, and store only email addresses.
-- Add a disclaimer: “Always confirm dates on the official site. Not affiliated with any race.”
+- Only official race pages are checked, never aggregators (which usually forbid scraping).
+- One request per page per day, robots.txt respected, and a user agent that names the bot and links here.
+- Only facts and links are stored; no race descriptions, logos or photos.
 
-**Open questions**
+## Roadmap
 
-- [x] Which races go on the first list? (Ask the group.) First suggestions added Oct 2026.
-- [x] Include international majors from day one, or later? From day one: Paris, Berlin Half and Milan.
-- [x] Who besides you can approve PRs? Engineer 2 has access as a backup; a non-technical club reviewer is still wanted.
-- [ ] Public repo (free Actions, open to contributors) or private?
-- [ ] Is a weekly WhatsApp digest wanted, and who posts it?
-- [ ] Should the project carry the club's name, or stay independent?
+- Pick individual races for your calendar, not just groups
+- A ready-to-paste weekly WhatsApp digest of upcoming ballots
+- A suggestion form for runners without GitHub accounts
+- More races, as the club asks for them
+
+## Licence
+
+[MIT](LICENSE)
